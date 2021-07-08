@@ -9,11 +9,11 @@
           <a href="{{route('site.language')}}" class="text-dark p-2">{{__('site.language')}}</a>
         </p>
         <p class="text-center text-muted small mb-0">
-          <span class="text-muted">© {{date('Y')}} {{config('pixelfed.domain.app')}}</span>
+          <span class="text-muted">© {{date('Y')}}</span>
           <span class="mx-2">·</span>
-          <a href="https://pixelfed.org" class="text-muted font-weight-bold" rel="noopener">Powered by Pixelfed</a>
+          <a href="https://pixey.org" class="text-muted font-weight-bold" rel="noopener">Pixey.org</a>
           <span class="mx-2">·</span>
-          <span class="text-muted">v{{config('pixelfed.version')}}</span>
+          <span class="text-muted"><a href="https://pixelfed.org" class="text-muted font-weight-bold" rel="noopener">Pixelfed  v{{config('pixelfed.version')}}</a></span>
         </p>
     </div>
   </footer>

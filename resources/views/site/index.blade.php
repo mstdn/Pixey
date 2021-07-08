@@ -57,7 +57,7 @@
 					<div>
 						<div class="pt-md-3 d-flex justify-content-center align-items-center">
 							<img src="/img/pixelfed-icon-color.svg" loading="lazy" width="50px" height="50px">
-							<span class="font-weight-bold h3 ml-2 pt-2">Pixelfed</span>
+							<span class="font-weight-bold h3 ml-2 pt-2">Pixey</span>
 						</div>
 						<div class="d-block d-md-none">
 							<p class="font-weight-bold mb-0 text-center">Photo Sharing. For Everyone</p>
