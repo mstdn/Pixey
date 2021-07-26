@@ -16,6 +16,7 @@ use App\{
     UserFilter
 };
 use Auth, Cache;
+use Illuminate\Support\Facades\Redis;
 use Carbon\Carbon;
 use League\Fractal;
 use App\Transformer\Api\{
@@ -304,7 +305,7 @@ class PublicApiController extends Controller
                         'local'
                       )
             		  ->where('id', $dir, $id)
-                      ->whereIn('type', ['text', 'photo', 'photo:album', 'video', 'video:album', 'photo:video:album'])
+                      ->whereIn('type', ['photo', 'photo:album', 'video', 'video:album', 'photo:video:album'])
                       ->whereNotIn('profile_id', $filtered)
                       ->whereLocal(true)
                       ->whereScope('public')
@@ -338,7 +339,7 @@ class PublicApiController extends Controller
                         'reblogs_count',
                         'updated_at'
                       )
-            		  ->whereIn('type', ['text', 'photo', 'photo:album', 'video', 'video:album', 'photo:video:album'])
+            		  ->whereIn('type', ['photo', 'photo:album', 'video', 'video:album', 'photo:video:album'])
                       ->whereNotIn('profile_id', $filtered)
                       ->with('profile', 'hashtags', 'mentions')
                       ->whereLocal(true)
@@ -401,6 +402,11 @@ class PublicApiController extends Controller
         }
 
         $filtered = $user ? UserFilterService::filters($user->profile_id) : [];
+        $textOnlyPosts = (bool) Redis::zscore('pf:tl:top', $pid);
+        $textOnlyReplies = (bool) Redis::zscore('pf:tl:replies', $pid);
+        $types = $textOnlyPosts ?
+        	['text', 'photo', 'photo:album', 'video', 'video:album', 'photo:video:album'] :
+        	['photo', 'photo:album', 'video', 'video:album', 'photo:video:album'];
 
         if($min || $max) {
             $dir = $min ? '>' : '<';
@@ -425,7 +431,10 @@ class PublicApiController extends Controller
                         'created_at',
                         'updated_at'
                       )
-            		  ->whereIn('type', ['text','photo', 'photo:album', 'video', 'video:album', 'photo:video:album'])
+            		  ->whereIn('type', $types)
+                      ->when(!$textOnlyReplies, function($q, $textOnlyReplies) {
+                      	return $q->whereNull('in_reply_to_id');
+                  	  })
                       ->with('profile', 'hashtags', 'mentions')
                       ->where('id', $dir, $id)
                       ->whereIn('profile_id', $following)
@@ -455,7 +464,10 @@ class PublicApiController extends Controller
                         'created_at',
                         'updated_at'
                       )
-            		  ->whereIn('type', ['text','photo', 'photo:album', 'video', 'video:album', 'photo:video:album'])
+            		  ->whereIn('type', $types)
+            		  ->when(!$textOnlyReplies, function($q, $textOnlyReplies) {
+                      	return $q->whereNull('in_reply_to_id');
+                  	  })
                       ->with('profile', 'hashtags', 'mentions')
                       ->whereIn('profile_id', $following)
                       ->whereNotIn('profile_id', $filtered)
