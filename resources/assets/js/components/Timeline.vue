@@ -12,7 +12,7 @@
 					<div style="margin-top:-2px;">
 						<story-component v-if="config.features.stories" :scope="scope"></story-component>
 					</div>
-					<div>
+					<div class="pt-4">
 						<div v-if="loading" class="text-center" style="padding-top:10px;">
 							<div class="spinner-border" role="status">
 								<span class="sr-only">Loading...</span>
@@ -106,6 +106,8 @@
 								size="small"
 								v-on:status-delete="deleteStatus"
 								v-on:comment-focus="commentFocus"
+								v-on:followed="followedAccount"
+								v-on:unfollowed="unfollowedAccount"
 							/>
 						</div>
 
@@ -319,7 +321,7 @@
 									<a href="/site/terms" class="text-lighter pr-2">Terms</a>
 								</p>
 								<p class="mb-0 text-uppercase text-muted small">
-									<a href="http://pixelfed.org" class="text-lighter" rel="noopener" title="" data-toggle="tooltip">Powered by Pixelfed</a>
+									<a href="https://pixelfed.org" class="text-lighter" rel="noopener" title="" data-toggle="tooltip">Powered by Pixelfed</a>
 								</p>
 							</div>
 						</footer>
@@ -506,7 +508,8 @@
 				recentFeedMin: null,
 				recentFeedMax: null,
 				reactionBar: true,
-				emptyFeed: false
+				emptyFeed: false,
+				filters: []
 			}
 		},
 
@@ -565,7 +568,16 @@
 						break;
 					}
 				}
-				this.fetchTimelineApi();
+
+				if(this.scope != 'home') {
+					axios.get('/api/pixelfed/v2/filters')
+					.then(res => {
+						this.filters = res.data;
+						this.fetchTimelineApi();
+					});
+				} else {
+					this.fetchTimelineApi();
+				}
 			});
 		},
 
@@ -625,6 +637,12 @@
 						this.loading = false;
 						this.emptyFeed = true;
 						return;
+					}
+
+					if(this.filters.length) {
+						data = data.filter(d => {
+							return this.filters.includes(d.account.id) == false;
+						});
 					}
 
 					this.feed.push(...data);
@@ -1067,7 +1085,29 @@
 				this.feed = this.feed.filter(s => {
 					return s.id != status;
 				});
-			}
+			},
+
+			followedAccount(id) {
+				this.feed = this.feed.map(s => {
+					if(s.account.id == id) {
+						if(s.hasOwnProperty('relationship') && s.relationship.following == false) {
+							s.relationship.following = true;
+						}
+					}
+					return s;
+				});
+			},
+
+			unfollowedAccount(id) {
+				this.feed = this.feed.map(s => {
+					if(s.account.id == id) {
+						if(s.hasOwnProperty('relationship') && s.relationship.following == true) {
+							s.relationship.following = false;
+						}
+					}
+					return s;
+				});
+			},
 		},
 
 		beforeDestroy () {

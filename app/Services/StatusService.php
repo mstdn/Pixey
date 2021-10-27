@@ -40,6 +40,13 @@ class StatusService {
 		});
 	}
 
+	public static function getFull($id, $pid, $publicOnly = true)
+	{
+		$res = self::get($id, $publicOnly);
+		$res['relationship'] = RelationshipService::get($pid, $res['account']['id']);
+		return $res;
+	}
+
 	public static function del($id)
 	{
 		$status = self::get($id);
@@ -54,5 +61,13 @@ class StatusService {
 		PublicTimelineService::rem($id);
 		Cache::forget(self::key($id, false));
 		return Cache::forget(self::key($id));
+	}
+
+	public static function refresh($id)
+	{
+		Cache::forget(self::key($id, false));
+		Cache::forget(self::key($id, true));
+		self::get($id, false);
+		self::get($id, true);
 	}
 }

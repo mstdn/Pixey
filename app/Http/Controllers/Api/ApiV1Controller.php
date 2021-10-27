@@ -55,9 +55,11 @@ use App\Services\{
 	MediaPathService,
 	PublicTimelineService,
 	ProfileService,
+	RelationshipService,
 	SearchApiV2Service,
 	StatusService,
-	MediaBlocklistService
+	MediaBlocklistService,
+	UserFilterService
 };
 use App\Util\Lexer\Autolink;
 
@@ -551,7 +553,7 @@ class ApiV1Controller extends Controller
 	 *
 	 * @param  array|integer  $id
 	 *
-	 * @return \App\Transformer\Api\RelationshipTransformer
+	 * @return \App\Services\RelationshipService
 	 */
 	public function accountRelationshipsById(Request $request)
 	{
@@ -562,13 +564,13 @@ class ApiV1Controller extends Controller
 			'id.*'  => 'required|integer|min:1|max:' . PHP_INT_MAX
 		]);
 		$pid = $request->user()->profile_id ?? $request->user()->profile->id;
-		$ids = collect($request->input('id'));
-		$filtered = $ids->filter(function($v) use($pid) {
-			return $v != $pid;
+		$res = collect($request->input('id'))
+			->filter(function($id) use($pid) {
+				return $id != $pid;
+			})
+			->map(function($id) use($pid) {
+				return RelationshipService::get($pid, $id);
 		});
-		$relations = Profile::whereNull('status')->findOrFail($filtered->values());
-		$fractal = new Fractal\Resource\Collection($relations, new RelationshipTransformer());
-		$res = $this->fractal->createData($fractal)->toArray();
 		return response()->json($res);
 	}
 
@@ -1486,14 +1488,15 @@ class ApiV1Controller extends Controller
 		$max = $request->input('max_id');
 		$limit = $request->input('limit') ?? 3;
 		$user = $request->user();
+        $filtered = $user ? UserFilterService::filters($user->profile_id) : [];
 
-		Cache::remember('api:v1:timelines:public:cache_check', 3600, function() {
+		Cache::remember('api:v1:timelines:public:cache_check', 10368000, function() {
 			if(PublicTimelineService::count() == 0) {
-	        	PublicTimelineService::warmCache(true, 400);
-	        }
+				PublicTimelineService::warmCache(true, 400);
+			}
 		});
 
-        if ($max) {
+		if ($max) {
 			$feed = PublicTimelineService::getRankedMaxId($max, $limit);
 		} else if ($min) {
 			$feed = PublicTimelineService::getRankedMinId($min, $limit);
@@ -1502,14 +1505,18 @@ class ApiV1Controller extends Controller
 		}
 
 		$res = collect($feed)
-            ->map(function($k) use($user) {
-                $status = StatusService::get($k);
-                if($user) {
-                	$status['favourited'] = (bool) LikeService::liked($user->profile_id, $k);
-                }
-                return $status;
-            })
-            ->toArray();
+		->map(function($k) use($user) {
+			$status = StatusService::get($k);
+			if($user) {
+				$status['favourited'] = (bool) LikeService::liked($user->profile_id, $k);
+				$status['relationship'] = RelationshipService::get($user->profile_id, $status['account']['id']);
+			}
+			return $status;
+		})
+		->filter(function($s) use($filtered) {
+			return in_array($s['account']['id'], $filtered) == false;
+		})
+		->toArray();
 		return response()->json($res);
 	}
 
