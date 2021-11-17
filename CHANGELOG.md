@@ -2,6 +2,9 @@
 
 ## [Unreleased](https://github.com/pixelfed/pixelfed/compare/v0.11.1...dev)
 
+### Added
+- Manual email verification requests. ([bc659387](https://github.com/pixelfed/pixelfed/commit/bc659387))
+
 ### Updated
 - Updated NotificationService, fix 500 bug. ([4a609dc3](https://github.com/pixelfed/pixelfed/commit/4a609dc3))
 - Updated HttpSignatures, update instance actor headers. Fixes #2935. ([a900de21](https://github.com/pixelfed/pixelfed/commit/a900de21))
@@ -24,6 +27,10 @@
 - Updated public timeline api, add experimental cache. ([192553ff](https://github.com/pixelfed/pixelfed/commit/192553ff))
 - Updated dark mode styles, fix black box on stories. Closes #2982. ([3169f68e](https://github.com/pixelfed/pixelfed/commit/3169f68e))
 - Updated verify_credentials api endpoint to improve performance. ([7df3540b](https://github.com/pixelfed/pixelfed/commit/7df3540b))
+- Updated Localization util, filter out .DS_Store. ([0107e8fd](https://github.com/pixelfed/pixelfed/commit/0107e8fd))
+- Updated PublicApiController, fix private account statuses api. Closes #2995. ([aa2dd26c](https://github.com/pixelfed/pixelfed/commit/aa2dd26c))
+- Updated Status model, use AccountService to generate urls instead of loading profile relation. ([2ae527c0](https://github.com/pixelfed/pixelfed/commit/2ae527c0))
+- Updated Autospam service, add mark all as read and mark all as not spam options and filter active, spam and not spam reports. ([ae8c7517](https://github.com/pixelfed/pixelfed/commit/ae8c7517))
 -  ([](https://github.com/pixelfed/pixelfed/commit/))
 
 ## [v0.11.1 (2021-09-07)](https://github.com/pixelfed/pixelfed/compare/v0.11.0...v0.11.1)
