@@ -3,7 +3,7 @@
 return [
 
 	'common' => [
-		'comment' => 'Comment',
+		'comment' => 'Comentar',
 		'commented' => 'Commented',
 		'comments' => 'Comments',
 		'like' => 'Like',
@@ -14,7 +14,7 @@ return [
 		'shares' => 'Shares',
 		'unshare' => 'Unshare',
 
-		'cancel' => 'Cancel',
+		'cancel' => 'Anullar',
 		'copyLink' => 'Copy Link',
 		'delete' => 'Delete',
 		'error' => 'Error',
@@ -55,6 +55,14 @@ return [
 		'drive' => 'Drive',
 		'settings' => 'Settings',
 		'compose' => 'Create New',
+		'logout' => 'Logout',
+
+		// Nav footer
+		'about' => 'About',
+		'help' => 'Help',
+		'language' => 'Language',
+		'privacy' => 'Privacy',
+		'terms' => 'Terms',
 
 		// Temporary links
 		'backToPreviousDesign' => 'Go back to previous design'
@@ -109,6 +117,9 @@ return [
 		'editProfile' => 'Edit Profile',
 		'followRequested' => 'Follow Requested',
 		'joined' => 'Joined',
+
+		'emptyCollections' => 'We can\'t seem to find any collections',
+		'emptyPosts' => 'We can\'t seem to find any posts',
 	],
 
 	'menu' => [
@@ -161,11 +172,15 @@ return [
 	],
 
 	'story' => [
-		'add' => 'Add Story'
+		'add' => 'Apondre Story'
 	],
 
 	'timeline' => [
-		'peopleYouMayKnow' => 'People you may know'
-	]
+		'peopleYouMayKnow' => 'Personas que coneissètz benlèu'
+	],
+
+	'hashtags' => [
+		'emptyFeed' => 'We can\'t seem to find any posts for this hashtag'
+	],
 
 ];

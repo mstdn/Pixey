@@ -210,6 +210,7 @@ Route::domain(config('pixelfed.domain.app'))->middleware(['validemail', 'twofact
 			});
 
 			Route::get('discover/accounts/popular', 'Api\ApiV1Controller@discoverAccountsPopular');
+			Route::post('web/change-language.json', 'SpaController@updateLanguage');
 		});
 
 		Route::group(['prefix' => 'local'], function () {
@@ -336,6 +337,7 @@ Route::domain(config('pixelfed.domain.app'))->middleware(['validemail', 'twofact
 		Route::post('warning', 'AccountInterstitialController@read');
 		Route::get('my2020', 'SeasonalController@yearInReview');
 
+		Route::get('web/username/{id}', 'SpaController@usernameRedirect');
 		Route::get('web/post/{id}', 'SpaController@webPost');
 		Route::get('web/profile/{id}', 'SpaController@webProfile');
 		Route::get('web/{q}', 'SpaController@index')->where('q', '.*');

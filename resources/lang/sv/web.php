@@ -55,6 +55,7 @@ return [
 		'drive' => 'Drive',
 		'settings' => 'Settings',
 		'compose' => 'Create New',
+		'logout' => 'Logout',
 
 		// Nav footer
 		'about' => 'About',
@@ -116,6 +117,9 @@ return [
 		'editProfile' => 'Edit Profile',
 		'followRequested' => 'Follow Requested',
 		'joined' => 'Joined',
+
+		'emptyCollections' => 'We can\'t seem to find any collections',
+		'emptyPosts' => 'We can\'t seem to find any posts',
 	],
 
 	'menu' => [
@@ -173,6 +177,10 @@ return [
 
 	'timeline' => [
 		'peopleYouMayKnow' => 'People you may know'
-	]
+	],
+
+	'hashtags' => [
+		'emptyFeed' => 'We can\'t seem to find any posts for this hashtag'
+	],
 
 ];

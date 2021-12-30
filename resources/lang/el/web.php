@@ -11,8 +11,8 @@ return [
 		'likes' => 'Αρέσει',
 		'share' => 'Κοινοποίηση',
 		'shared' => 'Κοινοποιήθηκε',
-		'shares' => 'Shares',
-		'unshare' => 'Unshare',
+		'shares' => 'Κοινοποιήσεις',
+		'unshare' => 'Αναίρεση κοινοποίησης',
 
 		'cancel' => 'Ακύρωση',
 		'copyLink' => 'Αντιγραφή Συνδέσμου',
@@ -52,9 +52,10 @@ return [
 
 		// Self links
 		'profile' => 'Προφίλ',
-		'drive' => 'Drive',
+		'drive' => 'Χώρος αποθήκευσης',
 		'settings' => 'Ρυθμίσεις',
 		'compose' => 'Δημιουργία νέου',
+		'logout' => 'Αποσύνδεση',
 
 		// Nav footer
 		'about' => 'Σχετικά με',
@@ -116,6 +117,9 @@ return [
 		'editProfile' => 'Επεξεργασία Προφίλ',
 		'followRequested' => 'Ακολουθήστε Το Αίτημα',
 		'joined' => 'Joined',
+
+		'emptyCollections' => 'Δεν μπορούμε να βρούμε συλλογές',
+		'emptyPosts' => 'Δεν μπορούμε να βρούμε δημοσιεύσεις',
 	],
 
 	'menu' => [
@@ -173,6 +177,10 @@ return [
 
 	'timeline' => [
 		'peopleYouMayKnow' => 'Άτομα που μπορεί να ξέρετε'
-	]
+	],
+
+	'hashtags' => [
+		'emptyFeed' => 'Δεν μπορούμε να βρούμε δημοσιεύσεις για αυτό το hashtag'
+	],
 
 ];

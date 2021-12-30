@@ -15,11 +15,11 @@ return [
 		'unshare' => 'Unshare',
 
 		'cancel' => 'Cancel',
-		'copyLink' => 'Copy Link',
-		'delete' => 'Delete',
-		'error' => 'Error',
-		'errorMsg' => 'Something went wrong. Please try again later.',
-		'oops' => 'Oops!',
+		'copyLink' => '复制链接',
+		'delete' => '删除',
+		'error' => '错误',
+		'errorMsg' => '出错了。请稍后再试。',
+		'oops' => '哎呀！',
 		'other' => 'Other',
 		'readMore' => 'Read more',
 		'success' => 'Success',
@@ -55,11 +55,12 @@ return [
 		'drive' => 'Drive',
 		'settings' => 'Settings',
 		'compose' => 'Create New',
+		'logout' => 'Logout',
 
 		// Nav footer
 		'about' => 'About',
 		'help' => 'Help',
-		'language' => 'Language',
+		'language' => '语言',
 		'privacy' => 'Privacy',
 		'terms' => 'Terms',
 
@@ -116,6 +117,9 @@ return [
 		'editProfile' => 'Edit Profile',
 		'followRequested' => 'Follow Requested',
 		'joined' => 'Joined',
+
+		'emptyCollections' => 'We can\'t seem to find any collections',
+		'emptyPosts' => 'We can\'t seem to find any posts',
 	],
 
 	'menu' => [
@@ -173,6 +177,10 @@ return [
 
 	'timeline' => [
 		'peopleYouMayKnow' => 'People you may know'
-	]
+	],
+
+	'hashtags' => [
+		'emptyFeed' => 'We can\'t seem to find any posts for this hashtag'
+	],
 
 ];

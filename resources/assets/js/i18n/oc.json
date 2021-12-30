@@ -1,6 +1,6 @@
 {
     "common": {
-        "comment": "Comment",
+        "comment": "Comentar",
         "commented": "Commented",
         "comments": "Comments",
         "like": "Like",
@@ -10,7 +10,7 @@
         "shared": "Shared",
         "shares": "Shares",
         "unshare": "Unshare",
-        "cancel": "Cancel",
+        "cancel": "Anullar",
         "copyLink": "Copy Link",
         "delete": "Delete",
         "error": "Error",
@@ -42,6 +42,12 @@
         "drive": "Drive",
         "settings": "Settings",
         "compose": "Create New",
+        "logout": "Logout",
+        "about": "About",
+        "help": "Help",
+        "language": "Language",
+        "privacy": "Privacy",
+        "terms": "Terms",
         "backToPreviousDesign": "Go back to previous design"
     },
     "directMessages": {
@@ -85,7 +91,9 @@
         "unfollow": "Unfollow",
         "editProfile": "Edit Profile",
         "followRequested": "Follow Requested",
-        "joined": "Joined"
+        "joined": "Joined",
+        "emptyCollections": "We can't seem to find any collections",
+        "emptyPosts": "We can't seem to find any posts"
     },
     "menu": {
         "viewPost": "View Post",
@@ -131,9 +139,12 @@
         "unarchivePostConfirm": "Are you sure you want to unarchive this post?"
     },
     "story": {
-        "add": "Add Story"
+        "add": "Apondre Story"
     },
     "timeline": {
-        "peopleYouMayKnow": "People you may know"
+        "peopleYouMayKnow": "Personas que coneiss\u00e8tz benl\u00e8u"
+    },
+    "hashtags": {
+        "emptyFeed": "We can't seem to find any posts for this hashtag"
     }
 }
