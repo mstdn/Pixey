@@ -33,6 +33,13 @@ class RemoteAvatarFetch implements ShouldQueue
 	public $deleteWhenMissingModels = true;
 
 	/**
+	 * The number of times the job may be attempted.
+	 *
+	 * @var int
+	 */
+	public $tries = 1;
+
+	/**
 	* Create a new job instance.
 	*
 	* @return void
@@ -51,7 +58,7 @@ class RemoteAvatarFetch implements ShouldQueue
 	{
 		$profile = $this->profile;
 
-		if(config_cache('pixelfed.cloud_storage') !== true) {
+		if(config_cache('pixelfed.cloud_storage') == false && config_cache('federation.avatars.store_local') == false) {
 			return 1;
 		}
 
@@ -59,9 +66,13 @@ class RemoteAvatarFetch implements ShouldQueue
 			return 1;
 		}
 
-		$avatar = Avatar::firstOrCreate([
-			'profile_id' => $profile->id
-		]);
+		$avatar = Avatar::whereProfileId($profile->id)->first();
+
+		if(!$avatar) {
+			$avatar = new Avatar;
+			$avatar->profile_id = $profile->id;
+			$avatar->save();
+		}
 
 		if($avatar->media_path == null && $avatar->remote_url == null) {
 			$avatar->media_path = 'public/avatars/default.jpg';
@@ -95,7 +106,7 @@ class RemoteAvatarFetch implements ShouldQueue
 		$avatar->remote_url = $icon['url'];
 		$avatar->save();
 
-		MediaStorageService::avatar($avatar);
+		MediaStorageService::avatar($avatar, config_cache('pixelfed.cloud_storage') == false);
 
 		return 1;
 	}

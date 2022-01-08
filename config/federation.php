@@ -32,6 +32,10 @@ return [
 		'enabled' => env('ATOM_FEEDS', true),
 	],
 
+	'avatars' => [
+		'store_local' => env('REMOTE_AVATARS', true),
+	],
+
 	'nodeinfo' => [
 		'enabled' => env('NODEINFO', true),
 	],

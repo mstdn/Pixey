@@ -89,6 +89,26 @@ class PublicApiController extends Controller
         }
     }
 
+    public function getStatus(Request $request, $id)
+    {
+		abort_if(!$request->user(), 403);
+		$status = StatusService::get($id, false);
+		abort_if(!$status, 404);
+		if(in_array($status['visibility'], ['public', 'unlisted'])) {
+			return $status;
+		}
+		$pid = $request->user()->profile_id;
+		if($status['account']['id'] == $pid) {
+			return $status;
+		}
+		if($status['visibility'] == 'private') {
+			if(FollowerService::follows($pid, $status['account']['id'])) {
+				return $status;
+			}
+		}
+		abort(404);
+    }
+
     public function status(Request $request, $username, int $postid)
     {
         $profile = Profile::whereUsername($username)->whereNull('status')->firstOrFail();
@@ -717,6 +737,11 @@ class PublicApiController extends Controller
         $max_id = $request->max_id;
         $min_id = $request->min_id;
         $scope = ['photo', 'photo:album', 'video', 'video:album'];
+        $onlyMedia = $request->input('only_media', true);
+
+        if(!$min_id && !$max_id) {
+        	$min_id = 1;
+        }
 
         if($profile['locked']) {
             if(!$user) {
@@ -763,7 +788,16 @@ class PublicApiController extends Controller
             }
             return $status;
         })
-        ->filter(function($s) {
+        ->filter(function($s) use($onlyMedia) {
+        	if($onlyMedia) {
+        		if(
+        			!isset($s['media_attachments']) ||
+        			!is_array($s['media_attachments']) ||
+        			empty($s['media_attachments'])
+        		) {
+        			return false;
+        		}
+        	}
             return $s;
         })
         ->values();
