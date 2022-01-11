@@ -1,6 +1,8 @@
 # Release Notes
 
-## [Unreleased](https://github.com/pixelfed/pixelfed/compare/v0.11.1...dev)
+## [Unreleased](https://github.com/pixelfed/pixelfed/compare/v0.11.2...dev)
+
+## [v0.11.2 (2022-01-09)](https://github.com/pixelfed/pixelfed/compare/v0.11.1...v0.11.2)
 
 ### Breaking
 - Dropped support for PHP 7.3 [#3041](https://github.com/pixelfed/pixelfed/pull/3041)
@@ -9,6 +11,8 @@
 - Added UI Settings modal and fixed height media previews setting ([f2467e71](https://github.com/pixelfed/pixelfed/commit/f2467e71))
 - Set max-width of 1440px for larger screens ([af68872a](https://github.com/pixelfed/pixelfed/commit/af68872a))
 - Add link to sidebar profile card ([85964510](https://github.com/pixelfed/pixelfed/commit/85964510))
+- Improved search bar, now resolves (and imports) remote accounts and posts, including webfinger addresses ([c8a667f2](https://github.com/pixelfed/pixelfed/commit/c8a667f2))
+- Added user facing changelog at `/i/web/whats-new` ([e61dc66a](https://github.com/pixelfed/pixelfed/commit/e61dc66a))
 
 ### Configuration
 - Enable network timeline by default ([b95aec12](https://github.com/pixelfed/pixelfed/commit/b95aec12))
@@ -88,7 +92,14 @@
 - Updated PublicApiController, enforce only_media on accountStatuses method. Fixes #3105. ([861a2d36](https://github.com/pixelfed/pixelfed/commit/861a2d36))
 - Updated ApiV1Controller, add mastoapi strict mode. ([46485426](https://github.com/pixelfed/pixelfed/commit/46485426))
 - Updated AccountController, refresh RelationshipService on mute/block. ([6f1b0245](https://github.com/pixelfed/pixelfed/commit/6f1b0245))
--  ([](https://github.com/pixelfed/pixelfed/commit/))
+- Updated ApiV1Controller, fix version on instance endpoint. ([a6261221](https://github.com/pixelfed/pixelfed/commit/a6261221))
+- Updated components, fix api endpoints. Fixes #3138. ([e724633e](https://github.com/pixelfed/pixelfed/commit/e724633e))
+- Updated ApiV1Controller, fix public timeline endpoint. ([80c7def3](https://github.com/pixelfed/pixelfed/commit/80c7def3))
+- Updated PublicApiController, fix public timeline endpoint. ([dcb7ba9c](https://github.com/pixelfed/pixelfed/commit/dcb7ba9c))
+- Updated ApiV1Controller, fix home timeline entities. ([6fc0dcb3](https://github.com/pixelfed/pixelfed/commit/6fc0dcb3))
+- Updated ApiV1Controller, fix favourites endpoints ([d6d99385](https://github.com/pixelfed/pixelfed/commit/d6d99385))
+- Updated ApiV1Controller, fix reblogs endpoints ([de42d84c](https://github.com/pixelfed/pixelfed/commit/de42d84c))
+- Updated SearchApiV2Service, resolve remote queries. ([c8a667f2](https://github.com/pixelfed/pixelfed/commit/c8a667f2))
 
 ## [v0.11.1 (2021-09-07)](https://github.com/pixelfed/pixelfed/compare/v0.11.0...v0.11.1)
 ### Added
