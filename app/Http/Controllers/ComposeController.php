@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Auth, Cache, Storage, URL;
+use Auth, Cache, DB, Storage, URL;
 use Carbon\Carbon;
 use App\{
 	Avatar,
+	Collection,
+	CollectionItem,
 	Hashtag,
 	Like,
 	Media,
@@ -45,10 +47,12 @@ use App\Services\MediaBlocklistService;
 use App\Services\MediaStorageService;
 use App\Services\MediaTagService;
 use App\Services\StatusService;
+use App\Services\SnowflakeService;
 use Illuminate\Support\Str;
 use App\Util\Lexer\Autolink;
 use App\Util\Lexer\Extractor;
 use App\Util\Media\License;
+use Image;
 
 class ComposeController extends Controller
 {
@@ -74,7 +78,7 @@ class ComposeController extends Controller
 			'file.*' => function() {
 				return [
 					'required',
-					'mimes:' . config_cache('pixelfed.media_types'),
+					'mimetypes:' . config_cache('pixelfed.media_types'),
 					'max:' . config_cache('pixelfed.max_photo_size'),
 				];
 			},
@@ -169,7 +173,7 @@ class ComposeController extends Controller
 			'file' => function() {
 				return [
 					'required',
-					'mimes:' . config_cache('pixelfed.media_types'),
+					'mimetypes:' . config_cache('pixelfed.media_types'),
 					'max:' . config_cache('pixelfed.max_photo_size'),
 				];
 			},
@@ -313,22 +317,56 @@ class ComposeController extends Controller
 		$this->validate($request, [
 			'q' => 'required|string|max:100'
 		]);
+		$pid = $request->user()->profile_id;
+		abort_if(!$pid, 400);
 		$q = filter_var($request->input('q'), FILTER_SANITIZE_STRING);
 		$hash = hash('sha256', $q);
-		$key = 'search:location:id:' . $hash;
-		$places = Cache::remember($key, now()->addMinutes(15), function() use($q) {
+		$key = 'pf:search:location:v1:id:' . $hash;
+		$popular = Cache::remember('pf:search:location:v1:popular', 86400, function() {
+			if(config('database.default') != 'mysql') {
+				return [];
+			}
+			$minId = SnowflakeService::byDate(now()->subDays(290));
+			return Status::selectRaw('id, place_id, count(place_id) as pc')
+				->whereNotNull('place_id')
+				->where('id', '>', $minId)
+				->groupBy('place_id')
+				->orderByDesc('pc')
+				->limit(400)
+				->get()
+				->filter(function($post) {
+					return $post;
+				})
+				->map(function($place) {
+					return [
+						'id' => $place->place_id,
+						'count' => $place->pc
+					];
+				});
+		});
+		$places = Cache::remember($key, 900, function() use($q, $popular) {
 			$q = '%' . $q . '%';
-			return Place::where('name', 'like', $q)
-			->take(80)
+			return DB::table('places')
+			->where('name', 'like', $q)
+			->limit((strlen($q) > 5 ? 360 : 180))
 			->get()
+			->sortByDesc(function($place, $key) use($popular) {
+				return $popular->filter(function($p) use($place) {
+					return $p['id'] == $place->id;
+				})->map(function($p) use($place) {
+					return in_array($place->country, ['Canada', 'USA', 'France', 'Germany', 'United Kingdom']) ? $p['count'] : 1;
+				})->values();
+			})
 			->map(function($r) {
 				return [
 					'id' => $r->id,
 					'name' => $r->name,
 					'country' => $r->country,
-					'url'   => $r->url()
+					'url'   => url('/discover/places/' . $r->id . '/' . $r->slug)
 				];
-			});
+			})
+			->values()
+			->all();
 		});
 		return $places;
 	}
@@ -413,7 +451,8 @@ class ComposeController extends Controller
 			'place' => 'nullable',
 			'comments_disabled' => 'nullable',
 			'tagged' => 'nullable',
-			'license' => 'nullable|integer|min:1|max:16'
+			'license' => 'nullable|integer|min:1|max:16',
+			'collections' => 'sometimes|array|min:1|max:5',
 			// 'optimize_media' => 'nullable'
 		]);
 
@@ -534,6 +573,20 @@ class ComposeController extends Controller
 			$mt->save();
 			MediaTagService::set($mt->status_id, $mt->profile_id);
 			MediaTagService::sendNotification($mt);
+		}
+
+		if($request->filled('collections')) {
+			$collections = Collection::whereProfileId($profile->id)
+				->find($request->input('collections'))
+				->each(function($collection) use($status) {
+					CollectionItem::firstOrCreate([
+						'collection_id' => $collection->id,
+						'object_type' => 'App\Status',
+						'object_id' => $status->id
+					], [
+						'order' => $collection->items()->count()
+					]);
+				});
 		}
 
 		NewStatusPipeline::dispatch($status);

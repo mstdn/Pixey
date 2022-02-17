@@ -74,6 +74,7 @@ use App\Services\{
 	UserFilterService
 };
 use App\Util\Lexer\Autolink;
+use App\Util\Lexer\PrettyNumber;
 use App\Util\Localization\Localization;
 use App\Util\Media\License;
 use App\Jobs\MediaPipeline\MediaSyncLicensePipeline;
@@ -182,13 +183,17 @@ class ApiV1Controller extends Controller
 		abort_if(!$request->user(), 403);
 
 		$this->validate($request, [
-			'avatar'			=> 'sometimes|mimetypes:image/jpeg,image/png',
+			'avatar'			=> 'sometimes|mimetypes:image/jpeg,image/png|min:10|max:' . config('pixelfed.max_avatar_size'),
 			'display_name'      => 'nullable|string',
 			'note'              => 'nullable|string',
 			'locked'            => 'nullable',
 			'website'			=> 'nullable',
 			// 'source.privacy'    => 'nullable|in:unlisted,public,private',
 			// 'source.sensitive'  => 'nullable|boolean'
+		], [
+			'required' => 'The :attribute field is required.',
+			'avatar.mimetypes' => 'The file must be in jpeg or png format',
+			'avatar.max' => 'The :attribute exceeds the file size limit of ' . PrettyNumber::size(config('pixelfed.max_avatar_size'), true, false),
 		]);
 
 		$user = $request->user();
@@ -200,8 +205,6 @@ class ApiV1Controller extends Controller
 		$syncLicenses = false;
 		$licenseChanged = false;
 		$composeSettings = array_merge(AccountService::defaultSettings()['compose_settings'], $settings->compose_settings ?? []);
-
-		// return $request->input('locked');
 
 		if($request->has('avatar')) {
 			$av = Avatar::whereProfileId($profile->id)->first();
@@ -1023,33 +1026,45 @@ class ApiV1Controller extends Controller
 
 		$user = $request->user();
 
-		$status = Status::findOrFail($id);
+		$status = StatusService::getMastodon($id, false);
 
-		if($status->profile_id !== $user->profile_id) {
-			if($status->scope == 'private') {
-				abort_if(!$status->profile->followedBy($user->profile), 403);
+		abort_unless($status, 400);
+
+		$spid = $status['account']['id'];
+
+		if($spid !== $user->profile_id) {
+			if($status['visibility'] == 'private') {
+				abort_if(!FollowerService::follows($user->profile_id, $spid), 403);
 			} else {
-				abort_if(!in_array($status->scope, ['public','unlisted']), 403);
+				abort_if(!in_array($status['visibility'], ['public','unlisted']), 403);
 			}
 		}
 
+		abort_if(
+			Like::whereProfileId($user->profile_id)
+				->where('created_at', '>', now()->subDay())
+				->count() >= 100,
+			429
+		);
+
 		$like = Like::firstOrCreate([
 			'profile_id' => $user->profile_id,
-			'status_id' => $status->id
+			'status_id' => $status['id']
 		]);
 
 		if($like->wasRecentlyCreated == true) {
-			$like->status_profile_id = $status->profile_id;
-			$like->is_comment = !empty($status->in_reply_to_id);
+			$like->status_profile_id = $spid;
+			$like->is_comment = !empty($status['in_reply_to_id']);
 			$like->save();
-			$status->likes_count = $status->likes()->count();
-			$status->save();
+			Status::findOrFail($status['id'])->update([
+				'favourites_count' => ($status['favourites_count'] ?? 0) + 1
+			]);
 			LikePipeline::dispatch($like);
 		}
 
-		$res = StatusService::getMastodon($status->id, false);
-		$res['favourited'] = true;
-		return response()->json($res);
+		$status['favourited'] = true;
+		$status['favourites_count'] = $status['favourites_count'] + 1;
+		return response()->json($status);
 	}
 
 	/**
@@ -1277,7 +1292,7 @@ class ApiV1Controller extends Controller
 		  'file.*'      => function() {
 			return [
 				'required',
-				'mimes:' . config_cache('pixelfed.media_types'),
+				'mimetypes:' . config_cache('pixelfed.media_types'),
 				'max:' . config_cache('pixelfed.max_photo_size'),
 			];
 		  },
@@ -2232,6 +2247,7 @@ class ApiV1Controller extends Controller
 		$share = Status::firstOrCreate([
 			'profile_id' => $user->profile_id,
 			'reblog_of_id' => $status->id,
+			'type' => 'share',
 			'in_reply_to_profile_id' => $status->profile_id,
 			'scope' => 'public',
 			'visibility' => 'public'
