@@ -4,6 +4,7 @@
 
 ### Added
 - Custom Emoji ([#3166](https://github.com/pixelfed/pixelfed/pull/3166))
+- LDAP Authentication ([#3296](https://github.com/pixelfed/pixelfed/pull/3296))
 
 ### Metro 2.0 UI
 - Added Hovercards ([16ced7b4](https://github.com/pixelfed/pixelfed/commit/16ced7b4))
@@ -24,6 +25,7 @@
 - Improved profile layout on mobile breakpoints ([77b9b6bd](https://github.com/pixelfed/pixelfed/commit/77b9b6bd))
 - New Discover layout with My Hashtags, My Memories, Account Insights, Find Friends and Server Timelines ([0b680099](https://github.com/pixelfed/pixelfed/commit/0b680099))
 - Fix private profile feed not loading for owner ([e950b3b2](https://github.com/pixelfed/pixelfed/commit/e950b3b2))
+- Add "Shared by" link to posts that opens a list of accounts that reblogged the post ([e4b4bfc1](https://github.com/pixelfed/pixelfed/commit/e4b4bfc1))
 
 ### Updated
 - Updated MediaStorageService, fix remote avatar bug. ([1c20d696](https://github.com/pixelfed/pixelfed/commit/1c20d696))
@@ -67,6 +69,14 @@
 - Updated admin diagnostics, add more configuration data to help diagnose potential issues. ([eab96fc3](https://github.com/pixelfed/pixelfed/commit/eab96fc3))
 - Updated ConfigCacheService, fix discover features. ([ad48521a](https://github.com/pixelfed/pixelfed/commit/ad48521a))
 - Updated MediaTransformer, fix type case bug. Fixes #3281. ([c1669253](https://github.com/pixelfed/pixelfed/commit/c1669253))
+- Updated SpaController, redirect web ui hashtags to legacy page for unauthenticated users. ([a44b812b](https://github.com/pixelfed/pixelfed/commit/a44b812b))
+- Updated ApiV1Controller, fixes #3288. ([3e670774](https://github.com/pixelfed/pixelfed/commit/3e670774))
+- Updated AP Helpers, fixes #3287. ([b78bff72](https://github.com/pixelfed/pixelfed/commit/b78bff72))
+- Updated AP Helpers, fixes #3290. ([53975206](https://github.com/pixelfed/pixelfed/commit/53975206))
+- Updated AccountController, refresh relationship after handling follow request. ([fe768785](https://github.com/pixelfed/pixelfed/commit/fe768785))
+- Updated CollectionController, fixes #3289. ([c7e1e473](https://github.com/pixelfed/pixelfed/commit/c7e1e473))
+- Updated SpaController, handle web redirects. ([b6c6c85b](https://github.com/pixelfed/pixelfed/commit/b6c6c85b))
+- Updated presenter components, remove video poster attribute. ([4d612dfa](https://github.com/pixelfed/pixelfed/commit/4d612dfa))
 -  ([](https://github.com/pixelfed/pixelfed/commit/))
 
 ## [v0.11.2 (2022-01-09)](https://github.com/pixelfed/pixelfed/compare/v0.11.1...v0.11.2)
