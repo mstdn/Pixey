@@ -26,6 +26,8 @@
 - New Discover layout with My Hashtags, My Memories, Account Insights, Find Friends and Server Timelines ([0b680099](https://github.com/pixelfed/pixelfed/commit/0b680099))
 - Fix private profile feed not loading for owner ([e950b3b2](https://github.com/pixelfed/pixelfed/commit/e950b3b2))
 - Add "Shared by" link to posts that opens a list of accounts that reblogged the post ([e4b4bfc1](https://github.com/pixelfed/pixelfed/commit/e4b4bfc1))
+- Notification filters ([537af6df](https://github.com/pixelfed/pixelfed/commit/537af6df))
+- Full screen preview on photo albums ([ac40fde1](https://github.com/pixelfed/pixelfed/commit/ac40fde1))
 
 ### Updated
 - Updated MediaStorageService, fix remote avatar bug. ([1c20d696](https://github.com/pixelfed/pixelfed/commit/1c20d696))
@@ -77,6 +79,10 @@
 - Updated CollectionController, fixes #3289. ([c7e1e473](https://github.com/pixelfed/pixelfed/commit/c7e1e473))
 - Updated SpaController, handle web redirects. ([b6c6c85b](https://github.com/pixelfed/pixelfed/commit/b6c6c85b))
 - Updated presenter components, remove video poster attribute. ([4d612dfa](https://github.com/pixelfed/pixelfed/commit/4d612dfa))
+- Improved reblog api performance ([3ef6c9fe](https://github.com/pixelfed/pixelfed/commit/3ef6c9fe))
+- Updated ApiV1Controller, fix unlisted replies. ([c13bca76](https://github.com/pixelfed/pixelfed/commit/c13bca76))
+- Updated SearchApiV2Service, filter banned instances. ([281443d7](https://github.com/pixelfed/pixelfed/commit/281443d7))
+- Updated DiscoverController, fix favourited state on memories. ([b91747b4](https://github.com/pixelfed/pixelfed/commit/b91747b4))
 -  ([](https://github.com/pixelfed/pixelfed/commit/))
 
 ## [v0.11.2 (2022-01-09)](https://github.com/pixelfed/pixelfed/compare/v0.11.1...v0.11.2)
