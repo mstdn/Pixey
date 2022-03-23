@@ -55,7 +55,7 @@ class InboxWorker implements ShouldQueue
                 // Job processed already
                 return 1;
             }
-            Cache::put($lockKey, 1, 300);
+            Cache::put($lockKey, 1, 3600);
         }
 
         if(!isset($headers['signature']) || !isset($headers['date'])) {
@@ -145,6 +145,9 @@ class InboxWorker implements ShouldQueue
        ) {
             return;
         }
+        if(!isset($bodyDecoded['id'])) {
+        	return;
+        }
         $signatureData = HttpSignature::parseSignatureHeader($signature);
         $keyId = Helpers::validateUrl($signatureData['keyId']);
         $id = Helpers::validateUrl($bodyDecoded['id']);
@@ -211,6 +214,9 @@ class InboxWorker implements ShouldQueue
           'User-Agent' => 'PixelfedBot v0.1 - https://pixelfed.org',
         ])->get($actor->remote_url);
         $res = json_decode($res->body(), true, 8);
+        if(!$res || empty($res) || !isset($res['publicKey']) || !isset($res['publicKey']['id'])) {
+        	return;
+        }
         if($res['publicKey']['id'] !== $actor->key_id) {
             return;
         }
