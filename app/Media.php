@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Util\Media\License;
 use Storage;
+use Illuminate\Support\Str;
 
 class Media extends Model
 {
@@ -53,6 +54,12 @@ class Media extends Model
 
         if(!$this->remote_media && $this->thumbnail_path) {
             return url(Storage::url($this->thumbnail_path));
+        }
+
+        if($this->media_path && $this->mime && in_array($this->mime, ['image/jpeg', 'image/png'])) {
+        	return $this->remote_media || Str::startsWith($this->media_path, 'http') ?
+                $this->media_path :
+                url(Storage::url($this->media_path));
         }
 
         return url(Storage::url('public/no-preview.png'));

@@ -7,6 +7,7 @@
 - LDAP Authentication ([#3296](https://github.com/pixelfed/pixelfed/pull/3296))
 
 ### Metro 2.0 UI
+- Dark Mode ([cb540373](https://github.com/pixelfed/pixelfed/commit/cb540373))
 - Added Hovercards ([16ced7b4](https://github.com/pixelfed/pixelfed/commit/16ced7b4))
 - Fix word-break on statuses ([16ced7b4](https://github.com/pixelfed/pixelfed/commit/16ced7b4))
 - Add pronouns to hovercards ([33f863e8](https://github.com/pixelfed/pixelfed/commit/33f863e8))
@@ -110,6 +111,17 @@
 - Updated ApiV1Controller, fix accountStatusesById endpoint. ([db7b1af3](https://github.com/pixelfed/pixelfed/commit/db7b1af3))
 - Updated ApiV1Controller, update statusCreate entity. ([a84ab6ea](https://github.com/pixelfed/pixelfed/commit/a84ab6ea))
 - Updated ApiV1Controller, remove pinned attribute to match MastoAPI Status entity. ([6057de30](https://github.com/pixelfed/pixelfed/commit/6057de30))
+- Updated controller signatures, fix mysql 8 support. ([72e3d891](https://github.com/pixelfed/pixelfed/commit/72e3d891))
+- Updated ApiV1Controller, remove no-preview image from media urls. ([37dfb101](https://github.com/pixelfed/pixelfed/commit/37dfb101))
+- Updated DeleteAccountPipeline, fix perf issues. ([a9edd93f](https://github.com/pixelfed/pixelfed/commit/a9edd93f))
+- Updated DeleteAccountPipeline, improve coverage. ([4870cc3b](https://github.com/pixelfed/pixelfed/commit/4870cc3b))
+- Updated media model, use original photo url for non-existent thumbnails. ([9b04b9d8](https://github.com/pixelfed/pixelfed/commit/9b04b9d8))
+- Updated PlaceController, require authentication. ([e7783af6](https://github.com/pixelfed/pixelfed/commit/e7783af6))
+- Updated PublicApiController, disable legacy public access to local timeline. ([6ba7d433](https://github.com/pixelfed/pixelfed/commit/6ba7d433))
+- Updated DiscoverController, cache public tag feed and only include local posts for unauthenticated users. ([0541aed5](https://github.com/pixelfed/pixelfed/commit/0541aed5))
+- Updated DiscoverController, improve tag feed performance. ([d8ff40eb](https://github.com/pixelfed/pixelfed/commit/d8ff40eb))
+- Updated ApiV1Controller, fix timeline pagination. ([a5cdc28b](https://github.com/pixelfed/pixelfed/commit/a5cdc28b))
+- Updated ApiV1Controller, add missing pagination header. ([5649873a](https://github.com/pixelfed/pixelfed/commit/5649873a))
 -  ([](https://github.com/pixelfed/pixelfed/commit/))
 
 ## [v0.11.2 (2022-01-09)](https://github.com/pixelfed/pixelfed/compare/v0.11.1...v0.11.2)

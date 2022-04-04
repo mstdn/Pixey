@@ -128,7 +128,7 @@ class PublicApiController extends Controller
         return response()->json($res);
     }
 
-    public function statusState(Request $request, $username, $postid)
+    public function statusState(Request $request, $username, int $postid)
     {
         $profile = Profile::whereUsername($username)->whereNull('status')->firstOrFail();
         $status = Status::whereProfileId($profile->id)->findOrFail($postid);
@@ -293,8 +293,8 @@ class PublicApiController extends Controller
           'limit'       => 'nullable|integer|max:30'
         ]);
 
-        if(config('instance.timeline.local.is_public') == false && !Auth::check()) {
-            abort(403, 'Authentication required.');
+        if(!$request->user()) {
+            return response('', 403);
         }
 
         $page = $request->input('page');
@@ -378,7 +378,7 @@ class PublicApiController extends Controller
                                return $status;
                           })
                           ->filter(function($s) use($filtered) {
-                                return $s && in_array($s['account']['id'], $filtered) == false;
+                                return $s && isset($s['account']) && in_array($s['account']['id'], $filtered) == false;
                           })
                           ->values();
 
@@ -402,7 +402,7 @@ class PublicApiController extends Controller
             $res = collect($feed)
             ->map(function($k) use($user) {
                 $status = StatusService::get($k);
-                if($user) {
+                if($status && isset($status['account']) && $user) {
                     $status['favourited'] = (bool) LikeService::liked($user->profile_id, $k);
                     $status['bookmarked'] = (bool) BookmarkService::get($user->profile_id, $k);
                     $status['reblogged'] = (bool) ReblogService::get($user->profile_id, $k);
@@ -411,7 +411,7 @@ class PublicApiController extends Controller
                 return $status;
             })
             ->filter(function($s) use($filtered) {
-                return isset($s['account']) && in_array($s['account']['id'], $filtered) == false;
+                return $s && isset($s['account']) && in_array($s['account']['id'], $filtered) == false;
             })
             ->values()
             ->toArray();
@@ -422,8 +422,8 @@ class PublicApiController extends Controller
 
     public function homeTimelineApi(Request $request)
     {
-        if(!Auth::check()) {
-            return abort(403);
+        if(!$request->user()) {
+            return response('', 403);
         }
 
         $this->validate($request,[
@@ -586,7 +586,10 @@ class PublicApiController extends Controller
 
     public function networkTimelineApi(Request $request)
     {
-        abort_if(!Auth::check(), 403);
+        if(!$request->user()) {
+            return response('', 403);
+        }
+
         abort_if(config('federation.network_timeline') == false, 404);
 
         $this->validate($request,[
