@@ -175,6 +175,7 @@ return [
 				'memory'        => 128,
 				'tries'         => 3,
 				'nice'          => 0,
+				'timeout'		=> 300
 			],
 		],
 
@@ -187,6 +188,7 @@ return [
 				'memory'        => 128,
 				'tries'         => 3,
 				'nice'          => 0,
+				'timeout'       => 300
 			],
 		],
 	],
