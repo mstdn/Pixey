@@ -22,6 +22,11 @@
 - Update home timeline, redirect to /i/web unless force_old_ui is present ([5ff4730f](https://github.com/pixelfed/pixelfed/commit/5ff4730f))
 - Update adminReportController, fix mail verification request 500 bug by changing filter precedence to catch deleted users that may still be cached in AccountService ([3f322e29](https://github.com/pixelfed/pixelfed/commit/3f322e29))
 - Update AP Helpers, fix getSensitive and getScope missing parameters ([657c66c1](https://github.com/pixelfed/pixelfed/commit/657c66c1))
+- Fix mastodon api compatibility ([#3499](https://github.com/pixelfed/pixelfed/pull/3499))
+- Add ffmpeg config, disable logging by default ([108e3803](https://github.com/pixelfed/pixelfed/commit/108e3803))
+- Refactor AP profileFetch logic to fix race conditions and improve updating fields and avatars ([505261da](https://github.com/pixelfed/pixelfed/commit/505261da))
+- Update network timeline api, limit falloff to 2 days ([13a66303](https://github.com/pixelfed/pixelfed/commit/13a66303))
+-  ([](https://github.com/pixelfed/pixelfed/commit/))
 
 ## [v0.11.3 (2022-05-09)](https://github.com/pixelfed/pixelfed/compare/v0.11.2...v0.11.3)
 
