@@ -29,7 +29,7 @@ use App\Services\ReblogService;
 
 class StatusController extends Controller
 {
-	public function show(Request $request, $username, int $id)
+	public function show(Request $request, $username, $id)
 	{
 		// redirect authed users to Metro 2.0
 		if($request->user()) {
@@ -106,6 +106,11 @@ class StatusController extends Controller
 
 	public function showEmbed(Request $request, $username, int $id)
 	{
+		if(!config('instance.embed.post')) {
+			$res = view('status.embed-removed');
+			return response($res)->withHeaders(['X-Frame-Options' => 'ALLOWALL']);
+		}
+
 		$profile = Profile::whereNull(['domain','status'])
 			->whereIsPrivate(false)
 			->whereUsername($username)
@@ -220,7 +225,7 @@ class StatusController extends Controller
 		StatusService::del($status->id, true);
 		if ($status->profile_id == $user->profile->id || $user->is_admin == true) {
 			Cache::forget('profile:status_count:'.$status->profile_id);
-			StatusDelete::dispatch($status);
+			StatusDelete::dispatchNow($status);
 		}
 
 		if($request->wantsJson()) {

@@ -24,8 +24,9 @@ class DeleteWorker implements ShouldQueue
 	protected $headers;
 	protected $payload;
 
-	public $timeout = 60;
-	public $tries = 1;
+	public $timeout = 120;
+	public $tries = 3;
+	public $maxExceptions = 1;
 
 	/**
 	 * Create a new job instance.
@@ -71,53 +72,45 @@ class DeleteWorker implements ShouldQueue
 				'b:' . base64_encode($actor) :
 				'h:' . hash('sha256', $actor);
 
-			$lockKey = 'ap:inbox:actor-delete-exists:lock:' . $hash;
-			Cache::lock($lockKey, 10)->block(5, function () use(
-				$headers,
-				$payload,
-				$actor,
-				$hash
-			) {
-				$key = 'ap:inbox:actor-delete-exists:' . $hash;
-				$actorDelete = Cache::remember($key, now()->addMinutes(15), function() use($actor) {
-					return Profile::whereRemoteUrl($actor)
-						->whereNotNull('domain')
-						->exists();
-				});
-				if($actorDelete) {
-					if($this->verifySignature($headers, $payload) == true) {
-						Cache::set($key, false);
-						$profile = Profile::whereNotNull('domain')
-							->whereNull('status')
-							->whereRemoteUrl($actor)
-							->first();
-						if($profile) {
-							DeleteRemoteProfilePipeline::dispatch($profile)->onQueue('delete');
-						}
-						return;
-					} else {
-						// Signature verification failed, exit.
-						return;
-					}
-				} else {
-					// Remote user doesn't exist, exit early.
-					return;
-				}
+			$key = 'ap:inbox:actor-delete-exists:' . $hash;
+			$actorDelete = Cache::remember($key, now()->addMinutes(15), function() use($actor) {
+				return Profile::whereRemoteUrl($actor)
+					->whereNotNull('domain')
+					->exists();
 			});
+			if($actorDelete) {
+				if($this->verifySignature($headers, $payload) == true) {
+					Cache::set($key, false);
+					$profile = Profile::whereNotNull('domain')
+						->whereNull('status')
+						->whereRemoteUrl($actor)
+						->first();
+					if($profile) {
+						DeleteRemoteProfilePipeline::dispatch($profile)->onQueue('delete');
+					}
+					return 1;
+				} else {
+					// Signature verification failed, exit.
+					return 1;
+				}
+			} else {
+				// Remote user doesn't exist, exit early.
+				return 1;
+			}
 
-			return;
+			return 1;
 		}
 
 		$profile = null;
 
 		if($this->verifySignature($headers, $payload) == true) {
 			(new Inbox($headers, $profile, $payload))->handle();
-			return;
+			return 1;
 		} else if($this->blindKeyRotation($headers, $payload) == true) {
 			(new Inbox($headers, $profile, $payload))->handle();
-			return;
+			return 1;
 		} else {
-			return;
+			return 1;
 		}
 	}
 
@@ -147,9 +140,17 @@ class DeleteWorker implements ShouldQueue
 			&& is_array($bodyDecoded['object'])
 			&& isset($bodyDecoded['object']['attributedTo'])
 		) {
-			if(parse_url($bodyDecoded['object']['attributedTo'], PHP_URL_HOST) !== $keyDomain) {
-				return;
-			}
+            $attr = Helpers::pluckval($bodyDecoded['object']['attributedTo']);
+            if(is_array($attr)) {
+                if(isset($attr['id'])) {
+                    $attr = $attr['id'];
+                } else {
+                    $attr = "";
+                }
+            }
+            if(parse_url($attr, PHP_URL_HOST) !== $keyDomain) {
+                return;
+            }
 		}
 		if(!$keyDomain || !$idDomain || $keyDomain !== $idDomain) {
 			return;

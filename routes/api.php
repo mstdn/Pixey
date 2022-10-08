@@ -94,6 +94,57 @@ Route::group(['prefix' => 'api'], function() use($middleware) {
 	Route::group(['prefix' => 'v2'], function() use($middleware) {
 		Route::get('search', 'Api\ApiV1Controller@searchV2')->middleware($middleware);
 		Route::post('media', 'Api\ApiV1Controller@mediaUploadV2')->middleware($middleware);
+		Route::get('streaming/config', 'Api\ApiV1Controller@getWebsocketConfig');
+	});
+
+	Route::group(['prefix' => 'v1.1'], function() use($middleware) {
+		Route::post('report', 'Api\ApiV1Dot1Controller@report')->middleware($middleware);
+
+		Route::group(['prefix' => 'accounts'], function () use($middleware) {
+			Route::delete('avatar', 'Api\ApiV1Dot1Controller@deleteAvatar')->middleware($middleware);
+			Route::get('{id}/posts', 'Api\ApiV1Dot1Controller@accountPosts')->middleware($middleware);
+			Route::post('change-password', 'Api\ApiV1Dot1Controller@accountChangePassword')->middleware($middleware);
+			Route::get('login-activity', 'Api\ApiV1Dot1Controller@accountLoginActivity')->middleware($middleware);
+			Route::get('two-factor', 'Api\ApiV1Dot1Controller@accountTwoFactor')->middleware($middleware);
+			Route::get('emails-from-pixelfed', 'Api\ApiV1Dot1Controller@accountEmailsFromPixelfed')->middleware($middleware);
+			Route::get('apps-and-applications', 'Api\ApiV1Dot1Controller@accountApps')->middleware($middleware);
+		});
+
+		Route::group(['prefix' => 'collections'], function () use($middleware) {
+			Route::get('accounts/{id}', 'CollectionController@getUserCollections')->middleware($middleware);
+			Route::get('items/{id}', 'CollectionController@getItems')->middleware($middleware);
+			Route::get('view/{id}', 'CollectionController@getCollection')->middleware($middleware);
+			Route::post('add', 'CollectionController@storeId')->middleware($middleware);
+			Route::post('update/{id}', 'CollectionController@store')->middleware($middleware);
+			Route::delete('delete/{id}', 'CollectionController@delete')->middleware($middleware);
+			Route::post('remove', 'CollectionController@deleteId')->middleware($middleware);
+		});
+
+		Route::group(['prefix' => 'direct'], function () use($middleware) {
+			Route::get('thread', 'DirectMessageController@thread')->middleware($middleware);
+			Route::post('thread/send', 'DirectMessageController@create')->middleware($middleware);
+			Route::delete('thread/message', 'DirectMessageController@delete')->middleware($middleware);
+			Route::post('thread/mute', 'DirectMessageController@mute')->middleware($middleware);
+			Route::post('thread/unmute', 'DirectMessageController@unmute')->middleware($middleware);
+			Route::post('thread/media', 'DirectMessageController@mediaUpload')->middleware($middleware);
+			Route::post('thread/read', 'DirectMessageController@read')->middleware($middleware);
+			Route::post('lookup', 'DirectMessageController@composeLookup')->middleware($middleware);
+		});
+
+		Route::group(['prefix' => 'stories'], function () use($middleware) {
+			Route::get('recent', 'StoryController@recent')->middleware($middleware);
+		});
+
+		Route::group(['prefix' => 'compose'], function () use($middleware) {
+			Route::get('search/location', 'ComposeController@searchLocation')->middleware($middleware);
+			Route::get('settings', 'ComposeController@composeSettings')->middleware($middleware);
+		});
+
+		Route::group(['prefix' => 'discover'], function () use($middleware) {
+			Route::get('accounts/popular', 'Api\ApiV1Controller@discoverAccountsPopular')->middleware($middleware);
+			Route::get('posts/trending', 'DiscoverController@trendingApi')->middleware($middleware);
+			Route::get('posts/hashtags', 'DiscoverController@trendingHashtags')->middleware($middleware);
+		});
 	});
 
 	Route::group(['prefix' => 'live'], function() use($middleware) {
@@ -101,11 +152,15 @@ Route::group(['prefix' => 'api'], function() use($middleware) {
 		Route::post('stream/edit', 'LiveStreamController@editStream')->middleware($middleware);
 		Route::get('active/list', 'LiveStreamController@getActiveStreams')->middleware($middleware);
 		Route::get('accounts/stream', 'LiveStreamController@getUserStream')->middleware($middleware);
+		Route::get('accounts/stream/guest', 'LiveStreamController@getUserStreamAsGuest');
 		Route::delete('accounts/stream', 'LiveStreamController@deleteStream')->middleware($middleware);
 		Route::get('chat/latest', 'LiveStreamController@getLatestChat')->middleware($middleware);
 		Route::post('chat/message', 'LiveStreamController@addChatComment')->middleware($middleware);
 		Route::post('chat/delete', 'LiveStreamController@deleteChatComment')->middleware($middleware);
-		Route::get('config', 'LiveStreamController@getConfig')->middleware($middleware);
+		Route::post('chat/ban-user', 'LiveStreamController@banChatUser')->middleware($middleware);
+		Route::post('chat/pin', 'LiveStreamController@pinChatComment')->middleware($middleware);
+		Route::post('chat/unpin', 'LiveStreamController@unpinChatComment')->middleware($middleware);
+		Route::get('config', 'LiveStreamController@getConfig');
 		Route::post('broadcast/publish', 'LiveStreamController@clientBroadcastPublish');
 		Route::post('broadcast/finish', 'LiveStreamController@clientBroadcastFinish');
 	});
