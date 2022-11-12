@@ -118,7 +118,9 @@ class PublicApiController extends Controller
         $status = Status::whereProfileId($profile->id)->findOrFail($postid);
         $this->scopeCheck($profile, $status);
         if(!$request->user()) {
-            $res = ['status' => StatusService::get($status->id)];
+            $cached = StatusService::get($status->id, false);
+            abort_if(!in_array($cached['visibility'], ['public', 'unlisted']), 403);
+            $res = ['status' => $cached];
         } else {
             $item = new Fractal\Resource\Item($status, new StatusStatelessTransformer());
             $res = [
@@ -362,7 +364,6 @@ class PublicApiController extends Controller
                           )
                           ->whereNull(['in_reply_to_id', 'reblog_of_id'])
                           ->whereIn('type', ['photo', 'photo:album', 'video', 'video:album', 'photo:video:album'])
-                          ->with('profile', 'hashtags', 'mentions')
                           ->whereLocal(true)
                           ->whereScope('public')
                           ->orderBy('id', 'desc')
@@ -401,6 +402,7 @@ class PublicApiController extends Controller
             }
 
             $res = collect($feed)
+            ->take($limit)
             ->map(function($k) use($user) {
                 $status = StatusService::get($k);
                 if($status && isset($status['account']) && $user) {
@@ -514,7 +516,6 @@ class PublicApiController extends Controller
                       ->when($textOnlyReplies != true, function($q, $textOnlyReplies) {
                         return $q->whereNull('in_reply_to_id');
                       })
-                      ->with('profile', 'hashtags', 'mentions')
                       ->where('id', $dir, $id)
                       ->whereIn('profile_id', $following)
                       ->whereIn('visibility',['public', 'unlisted', 'private'])
@@ -561,7 +562,6 @@ class PublicApiController extends Controller
                       ->when(!$textOnlyReplies, function($q, $textOnlyReplies) {
                         return $q->whereNull('in_reply_to_id');
                       })
-                      ->with('profile', 'hashtags', 'mentions')
                       ->whereIn('profile_id', $following)
                       ->whereIn('visibility',['public', 'unlisted', 'private'])
                       ->orderBy('created_at', 'desc')
@@ -680,6 +680,7 @@ class PublicApiController extends Controller
             }
 
             $res = collect($feed)
+            ->take($limit)
             ->map(function($k) use($user) {
                 $status = StatusService::get($k);
                 if($status && isset($status['account']) && $user) {

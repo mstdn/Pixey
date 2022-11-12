@@ -27,7 +27,7 @@ return [
 		],
 
 		'network' => [
-			'cached' => env('PF_NETWORK_TIMELINE') ? env('INSTANCE_NETWORK_TIMELINE_CACHED', false) : false,
+			'cached' => env('PF_NETWORK_TIMELINE') ? env('INSTANCE_NETWORK_TIMELINE_CACHED', true) : false,
 			'cache_dropoff' => env('INSTANCE_NETWORK_TIMELINE_CACHE_DROPOFF', 100),
 			'max_hours_old' => env('INSTANCE_NETWORK_TIMELINE_CACHE_MAX_HOUR_INGEST', 6)
 		]
@@ -84,4 +84,11 @@ return [
 	],
 
 	'enable_cc' => env('ENABLE_CONFIG_CACHE', false),
+
+	'has_legal_notice' => env('INSTANCE_LEGAL_NOTICE', false),
+
+	'embed' => [
+		'profile' => env('INSTANCE_PROFILE_EMBEDS', true),
+		'post' => env('INSTANCE_POST_EMBEDS', true),
+	],
 ];

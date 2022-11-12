@@ -4,6 +4,7 @@ Route::domain(config('pixelfed.domain.admin'))->prefix('i/admin')->group(functio
 	Route::redirect('/', '/dashboard');
 	Route::redirect('timeline', config('app.url').'/timeline');
 	Route::get('dashboard', 'AdminController@home')->name('admin.home');
+	Route::get('stats', 'AdminController@stats')->name('admin.stats');
 	Route::get('reports', 'AdminController@reports')->name('admin.reports');
 	Route::get('reports/show/{id}', 'AdminController@showReport');
 	Route::post('reports/show/{id}', 'AdminController@updateReport');
@@ -90,6 +91,35 @@ Route::domain(config('pixelfed.domain.admin'))->prefix('i/admin')->group(functio
 	Route::post('custom-emoji/new', 'AdminController@customEmojiStore');
 	Route::post('custom-emoji/delete/{id}', 'AdminController@customEmojiDelete');
 	Route::get('custom-emoji/duplicates/{id}', 'AdminController@customEmojiShowDuplicates');
+
+	Route::prefix('api')->group(function() {
+		Route::get('stats', 'AdminController@getStats');
+		Route::get('accounts', 'AdminController@getAccounts');
+		Route::get('posts', 'AdminController@getPosts');
+		Route::get('instances', 'AdminController@getInstances');
+	});
+});
+
+Route::domain(config('portfolio.domain'))->group(function () {
+	Route::redirect('redirect/home', config('app.url'));
+	Route::get('/', 'PortfolioController@index');
+	Route::post('api/portfolio/self/curated.json', 'PortfolioController@storeCurated');
+	Route::post('api/portfolio/self/settings.json', 'PortfolioController@getSettings');
+	Route::get('api/portfolio/account/settings.json', 'PortfolioController@getAccountSettings');
+	Route::post('api/portfolio/self/update-settings.json', 'PortfolioController@storeSettings');
+	Route::get('api/portfolio/{username}/feed', 'PortfolioController@getFeed');
+
+	Route::prefix(config('portfolio.path'))->group(function() {
+		Route::get('/', 'PortfolioController@index');
+		Route::get('settings', 'PortfolioController@settings')->name('portfolio.settings');
+		Route::post('settings', 'PortfolioController@store');
+		Route::get('{username}/{id}', 'PortfolioController@showPost');
+		Route::get('{username}', 'PortfolioController@show');
+
+		Route::fallback(function () {
+			return view('errors.404');
+		});
+	});
 });
 
 Route::domain(config('pixelfed.domain.app'))->middleware(['validemail', 'twofactor', 'localization'])->group(function () {
@@ -260,6 +290,14 @@ Route::domain(config('pixelfed.domain.app'))->middleware(['validemail', 'twofact
 			Route::post('v1/publish', 'StoryController@publishStory');
 			Route::delete('v1/delete/{id}', 'StoryController@apiV1Delete');
 		});
+
+		Route::group(['prefix' => 'portfolio'], function () {
+			Route::post('self/curated.json', 'PortfolioController@storeCurated');
+			Route::post('self/settings.json', 'PortfolioController@getSettings');
+			Route::get('account/settings.json', 'PortfolioController@getAccountSettings');
+			Route::post('self/update-settings.json', 'PortfolioController@storeSettings');
+			Route::get('{username}/feed', 'PortfolioController@getFeed');
+		});
 	});
 
 	Route::get('discover/tags/{hashtag}', 'DiscoverController@showTags');
@@ -344,6 +382,7 @@ Route::domain(config('pixelfed.domain.app'))->middleware(['validemail', 'twofact
 		Route::post('warning', 'AccountInterstitialController@read');
 		Route::get('my2020', 'SeasonalController@yearInReview');
 
+		Route::get('web/my-portfolio', 'PortfolioController@myRedirect');
 		Route::get('web/hashtag/{tag}', 'SpaController@hashtagRedirect');
 		Route::get('web/username/{id}', 'SpaController@usernameRedirect');
 		Route::get('web/post/{id}', 'SpaController@webPost');
@@ -505,6 +544,7 @@ Route::domain(config('pixelfed.domain.app'))->middleware(['validemail', 'twofact
 		Route::get('newsroom/archive', 'NewsroomController@archive');
 		Route::get('newsroom/search', 'NewsroomController@search');
 		Route::get('newsroom', 'NewsroomController@index');
+		Route::get('legal-notice', 'SiteController@legalNotice');
 	});
 
 	Route::group(['prefix' => 'timeline'], function () {
@@ -530,6 +570,11 @@ Route::domain(config('pixelfed.domain.app'))->middleware(['validemail', 'twofact
 		Route::get('/{q}', 'InstallController@index')->withoutMiddleware(['web'])->where('q', '.*');
 	});
 
+	Route::group(['prefix' => 'e'], function() {
+		Route::get('terms', 'MobileController@terms');
+		Route::get('privacy', 'MobileController@privacy');
+	});
+
 	Route::get('stories/{username}', 'ProfileController@stories');
 	Route::get('p/{id}', 'StatusController@shortcodeRedirect');
 	Route::get('c/{collection}', 'CollectionController@show');
@@ -540,6 +585,7 @@ Route::domain(config('pixelfed.domain.app'))->middleware(['validemail', 'twofact
 	Route::get('p/{username}/{id}.json', 'StatusController@showObject');
 	Route::get('p/{username}/{id}', 'StatusController@show');
 	Route::get('{username}/embed', 'ProfileController@embed');
+	Route::get('{username}/live', 'LiveStreamController@showProfilePlayer');
 	Route::get('@{username}@{domain}', 'SiteController@legacyWebfingerRedirect');
 	Route::get('@{username}', 'SiteController@legacyProfileRedirect');
 	Route::get('{username}', 'ProfileController@show');

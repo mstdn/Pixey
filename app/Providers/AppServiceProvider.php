@@ -8,7 +8,8 @@ use App\Observers\{
 	NotificationObserver,
 	ModLogObserver,
 	ProfileObserver,
-	StatusHashtagObserver,
+    StatusHashtagObserver,
+    StatusObserver,
 	UserObserver,
 	UserFilterObserver,
 };
@@ -19,6 +20,7 @@ use App\{
 	ModLog,
 	Profile,
 	StatusHashtag,
+    Status,
 	User,
 	UserFilter
 };
@@ -27,6 +29,7 @@ use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\Validator;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -47,10 +50,12 @@ class AppServiceProvider extends ServiceProvider
 		Profile::observe(ProfileObserver::class);
 		StatusHashtag::observe(StatusHashtagObserver::class);
 		User::observe(UserObserver::class);
+        Status::observe(StatusObserver::class);
 		UserFilter::observe(UserFilterObserver::class);
 		Horizon::auth(function ($request) {
 			return Auth::check() && $request->user()->is_admin;
 		});
+		Validator::includeUnvalidatedArrayKeys();
 	}
 
 	/**

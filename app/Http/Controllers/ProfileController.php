@@ -118,8 +118,7 @@ class ProfileController extends Controller
 					'list' => $settings->show_profile_followers
 				]
 			];
-			$ui = $request->has('ui') && $request->input('ui') == 'memory' ? 'profile.memory' : 'profile.show';
-			return view($ui, compact('profile', 'settings'));
+			return view('profile.show', compact('profile', 'settings'));
 		}
 	}
 
@@ -210,7 +209,7 @@ class ProfileController extends Controller
 			->whereProfileId($pid)
 			->whereVisibility('public')
 			->whereType('photo')
-			->latest()
+			->orderByDesc('id')
 			->take(10)
 			->get()
 			->map(function($status) {
@@ -224,10 +223,14 @@ class ProfileController extends Controller
 			})
 			->values();
 		$permalink = config('app.url') . "/users/{$profile['username']}.atom";
+		$headers = ['Content-Type' => 'application/atom+xml'];
 
+		if($items && $items->count()) {
+			$headers['Last-Modified'] = now()->parse($items->first()['created_at'])->toRfc7231String();
+		}
 		return response()
 			->view('atom.user', compact('profile', 'items', 'permalink'))
-			->header('Content-Type', 'application/atom+xml');
+			->withHeaders($headers);
 	}
 
 	public function meRedirect()
@@ -239,6 +242,10 @@ class ProfileController extends Controller
 	public function embed(Request $request, $username)
 	{
 		$res = view('profile.embed-removed');
+
+		if(!config('instance.embed.profile')) {
+			return response($res)->withHeaders(['X-Frame-Options' => 'ALLOWALL']);
+		}
 
 		if(strlen($username) > 15 || strlen($username) < 2) {
 			return response($res)->withHeaders(['X-Frame-Options' => 'ALLOWALL']);
