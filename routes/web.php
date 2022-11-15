@@ -92,11 +92,22 @@ Route::domain(config('pixelfed.domain.admin'))->prefix('i/admin')->group(functio
 	Route::post('custom-emoji/delete/{id}', 'AdminController@customEmojiDelete');
 	Route::get('custom-emoji/duplicates/{id}', 'AdminController@customEmojiShowDuplicates');
 
+	Route::get('directory/home', 'AdminController@directoryHome')->name('admin.directory');
+
 	Route::prefix('api')->group(function() {
 		Route::get('stats', 'AdminController@getStats');
 		Route::get('accounts', 'AdminController@getAccounts');
 		Route::get('posts', 'AdminController@getPosts');
 		Route::get('instances', 'AdminController@getInstances');
+		Route::post('directory/save', 'AdminController@directoryStore');
+		Route::get('directory/initial-data', 'AdminController@directoryInitialData');
+		Route::get('directory/popular-posts', 'AdminController@directoryGetPopularPosts');
+		Route::post('directory/add-by-id', 'AdminController@directoryGetAddPostByIdSearch');
+		Route::delete('directory/banner-image', 'AdminController@directoryDeleteBannerImage');
+		Route::post('directory/submit', 'AdminController@directoryHandleServerSubmission');
+		Route::post('directory/testimonial/save', 'AdminController@directorySaveTestimonial');
+		Route::post('directory/testimonial/delete', 'AdminController@directoryDeleteTestimonial');
+		Route::post('directory/testimonial/update', 'AdminController@directoryUpdateTestimonial');
 	});
 });
 
@@ -124,6 +135,7 @@ Route::domain(config('portfolio.domain'))->group(function () {
 
 Route::domain(config('pixelfed.domain.app'))->middleware(['validemail', 'twofactor', 'localization'])->group(function () {
 	Route::get('/', 'SiteController@home')->name('timeline.personal');
+	Route::redirect('/home', '/');
 
 	Auth::routes();
 
