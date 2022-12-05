@@ -9,6 +9,6 @@ return [
     'settings'       => 'Ayarlar',
     'admin'          => 'Yönetici',
     'logout'         => 'Çıkış',
-    'directMessages' => 'Direkt Mesaj',
+    'directMessages' => 'Direkt İleti',
 
 ];
