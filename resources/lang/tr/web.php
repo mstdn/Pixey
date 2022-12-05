@@ -39,13 +39,13 @@ return [
 		'admin' => 'Yönetici Paneli',
 
 		// Timelines
-		'homeFeed' => 'Home Feed',
+		'homeFeed' => 'Ana Akış',
 		'localFeed' => 'Yerel Akış',
 		'globalFeed' => 'Evrensel Akış',
 
 		// Core features
 		'discover' => 'Keşfet',
-		'directMessages' => 'Direkt Mesajlar',
+		'directMessages' => 'Direkt İletiler',
 		'notifications' => 'Bildirimler',
 		'groups' => 'Gruplar',
 		'stories' => 'Hikayeler',
@@ -55,7 +55,7 @@ return [
 		'drive' => 'Depolama',
 		'settings' => 'Ayarlar',
 		'compose' => 'Yeni oluştur',
-		'logout' => 'Logout',
+		'logout' => 'Çıkış',
 
 		// Nav footer
 		'about' => 'Hakkında',
@@ -75,33 +75,33 @@ return [
 	],
 
 	'notifications' => [
-		'liked' => 'liked your',
-		'commented' => 'commented on your',
-		'reacted' => 'reacted to your',
-		'shared' => 'shared your',
-		'tagged' => 'tagged you in a',
+		'liked' => 'seni beğendi',
+		'commented' => 'yorumladı',
+		'reacted' => 'tepki gösterdi',
+		'shared' => 'paylaştın',
+		'tagged' => 'seni biri etiketledi',
 
-		'updatedA' => 'updated a',
-		'sentA' => 'sent a',
+		'updatedA' => 'güncellenen',
+		'sentA' => 'gönderdi',
 
-		'followed' => 'followed',
-		'mentioned' => 'mentioned',
+		'followed' => 'Takipçi',
+		'mentioned' => 'bahsedilen',
 		'you' => 'sen',
 
 		'yourApplication' => 'Katılma isteğiniz',
 		'applicationApproved' => 'onaylandı!',
 		'applicationRejected' => 'reddedildi. 6 ay sonra, tekrar katılma isteğinde bulunabilirsiniz.',
 
-		'dm' => 'özel mesaj',
-		'groupPost' => 'group post',
+		'dm' => 'özel ileti',
+		'groupPost' => 'grup yayınla',
 		'modlog' => 'modlog',
-		'post' => 'post',
+		'post' => 'yayınla',
 		'story' => 'hikaye',
 	],
 
 	'post' => [
 		'shareToFollowers' => 'Takipçileri paylaş',
-		'shareToOther' => 'Share to other',
+		'shareToOther' => 'Diğerleriyle Paylaş',
 		'noLikes' => 'Henüz beğenilmedi',
 		'uploading' => 'Yükleniyor',
 	],
@@ -127,7 +127,7 @@ return [
 		'viewProfile' => 'Profili Görüntüle',
 		'moderationTools' => 'Denetim Ayarları',
 		'report' => 'Bildir',
-		'archive' => 'Archive',
+		'archive' => 'Arşiv',
 		'unarchive' => 'Arşivden çıkar',
 		'embed' => 'Embed',
 
@@ -135,12 +135,12 @@ return [
 		'unlistFromTimelines' => 'Akışlardan kaldır',
 		'addCW' => 'İçerik Uyarısını Ekle',
 		'removeCW' => 'İçerik Uyarısını Kaldır',
-		'markAsSpammer' => 'Mark as Spammer',
+		'markAsSpammer' => 'Spam olarak işaretle',
 		'markAsSpammerText' => 'Unlist + CW existing and future posts',
 		'spam' => 'İstenmeyen',
 		'sensitive' => 'Hassas içerik',
 		'abusive' => 'İstismarcı veya Zararlı',
-		'underageAccount' => 'Underage Account',
+		'underageAccount' => 'Reşit olmayan Hesap',
 		'copyrightInfringement' => 'Telif hakkı ihlali',
 		'impersonation' => 'Taklit Hesap',
 		'scamOrFraud' => 'Dolandırıcılık',
