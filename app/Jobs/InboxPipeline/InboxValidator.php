@@ -14,8 +14,10 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Zttp\Zttp;
 use App\Jobs\DeletePipeline\DeleteRemoteProfilePipeline;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Lottery;
 
 class InboxValidator implements ShouldQueue
 {
@@ -25,8 +27,9 @@ class InboxValidator implements ShouldQueue
     protected $headers;
     protected $payload;
 
-    public $timeout = 60;
+    public $timeout = 300;
     public $tries = 1;
+    public $maxExceptions = 1;
 
     /**
      * Create a new job instance.
@@ -49,12 +52,15 @@ class InboxValidator implements ShouldQueue
     {
         $username = $this->username;
         $headers = $this->headers;
+
+        if(empty($headers) || empty($this->payload) || !isset($headers['signature']) || !isset($headers['date'])) {
+            return;
+        }
+
         $payload = json_decode($this->payload, true, 8);
 
-        $profile = Profile::whereNull('domain')->whereUsername($username)->first();
-
         if(isset($payload['id'])) {
-            $lockKey = hash('sha256', $payload['id']);
+            $lockKey = 'pf:ap:user-inbox:activity:' . hash('sha256', $payload['id']);
             if(Cache::get($lockKey) !== null) {
                 // Job processed already
                 return 1;
@@ -62,9 +68,7 @@ class InboxValidator implements ShouldQueue
             Cache::put($lockKey, 1, 3600);
         }
 
-        if(!isset($headers['signature']) || !isset($headers['date'])) {
-            return;
-        }
+        $profile = Profile::whereNull('domain')->whereUsername($username)->first();
 
         if(empty($profile) || empty($headers) || empty($payload)) {
             return;
@@ -75,10 +79,12 @@ class InboxValidator implements ShouldQueue
         }
 
         if($this->verifySignature($headers, $profile, $payload) == true) {
-            (new Inbox($headers, $profile, $payload))->handle();
-            return;
-        } else if($this->blindKeyRotation($headers, $profile, $payload) == true) {
-            (new Inbox($headers, $profile, $payload))->handle();
+            if(isset($payload['type']) && in_array($payload['type'], ['Follow', 'Accept']) ) {
+                ActivityHandler::dispatch($headers, $profile, $payload)->onQueue('follow');
+            } else {
+                $onQueue = Lottery::odds(1, 12)->winner(fn () => 'high')->loser(fn () => 'inbox')->choose();
+                ActivityHandler::dispatch($headers, $profile, $payload)->onQueue($onQueue);
+            }
             return;
         } else {
             return;
@@ -93,18 +99,18 @@ class InboxValidator implements ShouldQueue
         $signature = is_array($headers['signature']) ? $headers['signature'][0] : $headers['signature'];
         $date = is_array($headers['date']) ? $headers['date'][0] : $headers['date'];
         if(!$signature) {
-            return;
+            return false;
         }
         if(!$date) {
-            return;
+            return false;
         }
         if(!now()->parse($date)->gt(now()->subDays(1)) || 
            !now()->parse($date)->lt(now()->addDays(1))
        ) {
-            return;
+            return false;
         }
         if(!isset($bodyDecoded['id'])) {
-        	return;
+        	return false;
         }
         $signatureData = HttpSignature::parseSignatureHeader($signature);
         $keyId = Helpers::validateUrl($signatureData['keyId']);
@@ -124,12 +130,11 @@ class InboxValidator implements ShouldQueue
                 }
             }
             if(parse_url($attr, PHP_URL_HOST) !== $keyDomain) {
-                return;
+                return false;
             }
         }
         if(!$keyDomain || !$idDomain || $keyDomain !== $idDomain) {
-            return;
-            abort(400, 'Invalid request');
+            return false;
         }
         $actor = Profile::whereKeyId($keyId)->first();
         if(!$actor) {
@@ -137,11 +142,11 @@ class InboxValidator implements ShouldQueue
             $actor = Helpers::profileFirstOrNew($actorUrl);
         }
         if(!$actor) {
-            return;
+            return false;
         }
         $pkey = openssl_pkey_get_public($actor->public_key);
         if(!$pkey) {
-            return 0;
+            return false;
         }
         $inboxPath = "/users/{$profile->username}/inbox";
         list($verified, $headers) = HttpSignature::verify($pkey, $signatureData, $headers, $inboxPath, $body);
@@ -176,10 +181,20 @@ class InboxValidator implements ShouldQueue
         if(Helpers::validateUrl($actor->remote_url) == false) {
             return;
         }
-        $res = Zttp::timeout(5)->withHeaders([
-          'Accept'     => 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"',
-          'User-Agent' => 'PixelfedBot v0.1 - https://pixelfed.org',
-        ])->get($actor->remote_url);
+
+        try {
+            $res = Http::timeout(20)->withHeaders([
+              'Accept'     => 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"',
+              'User-Agent' => 'PixelfedBot v0.1 - https://pixelfed.org',
+            ])->get($actor->remote_url);
+        } catch (ConnectionException $e) {
+            return false;
+        }
+
+        if(!$res->ok()) {
+            return false;
+        }
+
         $res = json_decode($res->body(), true, 8);
         if(!$res || empty($res) || !isset($res['publicKey']) || !isset($res['publicKey']['id'])) {
         	return;

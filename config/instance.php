@@ -1,6 +1,7 @@
 <?php
 
 return [
+	'force_https_urls' => env('FORCE_HTTPS_URLS', true),
 
 	'description' => env('INSTANCE_DESCRIPTION', 'Pixelfed - Photo sharing for everyone'),
 
@@ -22,6 +23,11 @@ return [
 	'email' => env('INSTANCE_CONTACT_EMAIL'),
 
 	'timeline' => [
+		'home' => [
+			'cached' => env('PF_HOME_TIMELINE_CACHE', false),
+			'cache_ttl' => env('PF_HOME_TIMELINE_CACHE_TTL', 900)
+		],
+
 		'local' => [
 			'is_public' => env('INSTANCE_PUBLIC_LOCAL_TIMELINE', false)
 		],
@@ -90,5 +96,15 @@ return [
 	'embed' => [
 		'profile' => env('INSTANCE_PROFILE_EMBEDS', true),
 		'post' => env('INSTANCE_POST_EMBEDS', true),
+	],
+
+	'hide_nsfw_on_public_feeds' => env('PF_HIDE_NSFW_ON_PUBLIC_FEEDS', false),
+
+	'avatar' => [
+		'local_to_cloud' => env('PF_LOCAL_AVATAR_TO_CLOUD', false)
+	],
+
+	'admin_invites' => [
+		'enabled' => env('PF_ADMIN_INVITES_ENABLED', true)
 	],
 ];

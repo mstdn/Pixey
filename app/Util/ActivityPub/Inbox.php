@@ -180,6 +180,8 @@ class Inbox
 				StoryFetch::dispatchNow($this->payload);
 			break;
 		}
+
+		return;
 	}
 
 	public function handleCreateActivity()
@@ -189,6 +191,13 @@ class Inbox
 		if(!$actor || $actor->domain == null) {
 			return;
 		}
+
+		if($actor->followers_count == 0) {
+			if(FollowerService::followerCount($actor->id, true) == 0) {
+				return;
+			}
+		}
+
 		if(!isset($activity['to'])) {
 			return;
 		}
@@ -202,7 +211,7 @@ class Inbox
 
 		if( is_array($to) &&
 			is_array($cc) &&
- 			count($to) == 1 &&
+			count($to) == 1 &&
 			count($cc) == 0 &&
 			parse_url($to[0], PHP_URL_HOST) == config('pixelfed.domain.app')
 		) {
@@ -219,6 +228,7 @@ class Inbox
 			}
 			$this->handleNoteCreate();
 		}
+		return;
 	}
 
 	public function handleNoteReply()
@@ -266,14 +276,23 @@ class Inbox
 			return;
 		}
 
-		if($actor->followers()->count() == 0) {
-			return;
+		if($actor->followers_count == 0) {
+			if(FollowerService::followerCount($actor->id, true) == 0) {
+				return;
+			}
 		}
 
+		$hasUrl = isset($activity['url']);
 		$url = isset($activity['url']) ? $activity['url'] : $activity['id'];
 
-		if(Status::whereUrl($url)->exists()) {
-			return;
+		if($hasUrl) {
+			if(Status::whereUri($url)->exists()) {
+				return;
+			}
+		} else {
+			if(Status::whereObjectUrl($url)->exists()) {
+				return;
+			}
 		}
 
 		Helpers::storeStatus(
@@ -288,10 +307,20 @@ class Inbox
 	{
 		$activity = $this->payload['object'];
 		$actor = $this->actorFirstOrCreate($this->payload['actor']);
+
+		if(!$actor) {
+			return;
+		}
+
 		$status = Helpers::statusFetch($activity['inReplyTo']);
+
+		if(!$status) {
+			return;
+		}
+
 		$poll = $status->poll;
 
-		if(!$status || !$poll) {
+		if(!$poll) {
 			return;
 		}
 
@@ -467,9 +496,14 @@ class Inbox
 	{
 		$actor = $this->actorFirstOrCreate($this->payload['actor']);
 		$target = $this->actorFirstOrCreate($this->payload['object']);
-		if(!$actor || $actor->domain == null || $target->domain !== null) {
+		if(!$actor || !$target) {
 			return;
 		}
+
+		if($actor->domain == null || $target->domain !== null) {
+			return;
+		}
+
 		if(
 			Follower::whereProfileId($actor->id)
 				->whereFollowingId($target->id)
@@ -481,10 +515,10 @@ class Inbox
 			return;
 		}
 
-        $blocks = UserFilterService::blocks($target->id);
-        if($blocks && in_array($actor->id, $blocks)) {
-            return;
-        }
+		$blocks = UserFilterService::blocks($target->id);
+		if($blocks && in_array($actor->id, $blocks)) {
+			return;
+		}
 
 		if($target->is_private == true) {
 			FollowRequest::updateOrCreate([
@@ -522,6 +556,8 @@ class Inbox
 			Cache::forget('profile:following_count:'.$target->id);
 			Cache::forget('profile:following_count:'.$actor->id);
 		}
+
+		return;
 	}
 
 	public function handleAnnounceActivity()
@@ -543,10 +579,10 @@ class Inbox
 			return;
 		}
 
-        $blocks = UserFilterService::blocks($parent->profile_id);
-        if($blocks && in_array($actor->id, $blocks)) {
-            return;
-        }
+		$blocks = UserFilterService::blocks($parent->profile_id);
+		if($blocks && in_array($actor->id, $blocks)) {
+			return;
+		}
 
 		$status = Status::firstOrCreate([
 			'profile_id' => $actor->id,
@@ -564,8 +600,10 @@ class Inbox
 			'item_type' => 'App\Status'
 		]);
 
-		$parent->reblogs_count = $parent->shares()->count();
+		$parent->reblogs_count = $parent->reblogs_count + 1;
 		$parent->save();
+
+		return;
 	}
 
 	public function handleAcceptActivity()
@@ -608,6 +646,8 @@ class Inbox
 		FollowPipeline::dispatch($follower);
 
 		$request->delete();
+
+		return;
 	}
 
 	public function handleDeleteActivity()
@@ -625,10 +665,15 @@ class Inbox
 			if(!$profile || $profile->private_key != null) {
 				return;
 			}
-			DeleteRemoteProfilePipeline::dispatch($profile)->onQueue('delete');
+			DeleteRemoteProfilePipeline::dispatch($profile)->onQueue('inbox');
 			return;
 		} else {
-			if(!isset($obj['id'], $this->payload['object'], $this->payload['object']['id'])) {
+			if(!isset(
+				$obj['id'],
+				$this->payload['object'],
+				$this->payload['object']['id'],
+				$this->payload['object']['type']
+			)) {
 				return;
 			}
 			$type = $this->payload['object']['type'];
@@ -646,7 +691,7 @@ class Inbox
 						if(!$profile || $profile->private_key != null) {
 							return;
 						}
-						DeleteRemoteProfilePipeline::dispatch($profile)->onQueue('delete');
+						DeleteRemoteProfilePipeline::dispatch($profile)->onQueue('inbox');
 						return;
 					break;
 
@@ -657,13 +702,11 @@ class Inbox
 						}
 						$status = Status::whereProfileId($profile->id)
 							->whereUri($id)
-							->orWhere('url', $id)
-							->orWhere('object_url', $id)
 							->first();
 						if(!$status) {
 							return;
 						}
-						DeleteRemoteStatusPipeline::dispatch($status)->onQueue('delete');
+						DeleteRemoteStatusPipeline::dispatch($status)->onQueue('high');
 						return;
 					break;
 
@@ -673,6 +716,7 @@ class Inbox
 					if($story) {
 						StoryExpire::dispatch($story)->onQueue('story');
 					}
+					return;
 					break;
 
 				default:
@@ -680,6 +724,7 @@ class Inbox
 					break;
 			}
 		}
+		return;
 	}
 
 	public function handleLikeActivity()
@@ -700,10 +745,10 @@ class Inbox
 			return;
 		}
 
-        $blocks = UserFilterService::blocks($status->profile_id);
-        if($blocks && in_array($profile->id, $blocks)) {
-            return;
-        }
+		$blocks = UserFilterService::blocks($status->profile_id);
+		if($blocks && in_array($profile->id, $blocks)) {
+			return;
+		}
 
 		$like = Like::firstOrCreate([
 			'profile_id' => $profile->id,
@@ -711,7 +756,7 @@ class Inbox
 		]);
 
 		if($like->wasRecentlyCreated == true) {
-			$status->likes_count = $status->likes()->count();
+			$status->likes_count = $status->likes_count + 1;
 			$status->save();
 			LikePipeline::dispatch($like);
 		}
@@ -729,6 +774,9 @@ class Inbox
 		$profile = self::actorFirstOrCreate($actor);
 		$obj = $this->payload['object'];
 
+		if(!$profile) {
+			return;
+		}
 		// TODO: Some implementations do not inline the object, skip for now
 		if(!$obj || !is_array($obj) || !isset($obj['type'])) {
 			return;
@@ -781,14 +829,22 @@ class Inbox
 				break;
 
 			case 'Like':
-				$status = Helpers::statusFirstOrFetch($obj['object']);
+				$objectUri = $obj['object'];
+				if(!is_string($objectUri)) {
+					if(is_array($objectUri) && isset($objectUri['id']) && is_string($objectUri['id'])) {
+						$objectUri = $objectUri['id'];
+					} else {
+						return;
+					}
+				}
+				$status = Helpers::statusFirstOrFetch($objectUri);
 				if(!$status) {
 					return;
 				}
 				Like::whereProfileId($profile->id)
 					->whereStatusId($status->id)
 					->forceDelete();
-				Notification::whereProfileId($status->profile->id)
+				Notification::whereProfileId($status->profile_id)
 					->whereActorId($profile->id)
 					->whereAction('like')
 					->whereItemId($status->id)
@@ -851,6 +907,8 @@ class Inbox
 			$story->view_count++;
 			$story->save();
 		}
+
+		return;
 	}
 
 	public function handleStoryReactionActivity()
@@ -960,6 +1018,8 @@ class Inbox
 		$n->message = "{$actorProfile->username} reacted to your story";
 		$n->rendered = "{$actorProfile->username} reacted to your story";
 		$n->save();
+
+		return;
 	}
 
 	public function handleStoryReplyActivity()
@@ -1069,5 +1129,7 @@ class Inbox
 		$n->message = "{$actorProfile->username} commented on story";
 		$n->rendered = "{$actorProfile->username} commented on story";
 		$n->save();
+
+		return;
 	}
 }
