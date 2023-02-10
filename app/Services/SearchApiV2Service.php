@@ -87,17 +87,18 @@ class SearchApiV2Service
 		$limit = $this->query->input('limit') ?? 20;
 		$offset = $this->query->input('offset') ?? 0;
 		$rawQuery = $initalQuery ? $initalQuery : $this->query->input('q');
-		$query = '%' . $rawQuery . '%';
-		if(Str::substrCount($rawQuery, '@') >= 1 && Str::contains($rawQuery, config('pixelfed.domain.app'))) {
-			$deliminatorCount = Str::substrCount($rawQuery, '@');
-			$query = explode('@', $rawQuery)[$deliminatorCount == 1 ? 0 : 1];
+		$query = $rawQuery . '%';
+		$webfingerQuery = $query;
+		if(Str::substrCount($rawQuery, '@') == 1 && substr($rawQuery, 0, 1) !== '@') {
+			$query = '@' . $query;
 		}
-		if(Str::substrCount($rawQuery, '@') == 1 && substr($rawQuery, 0, 1) == '@') {
-			$query = substr($rawQuery, 1) . '%';
+		if(substr($webfingerQuery, 0, 1) !== '@') {
+			$webfingerQuery = '@' . $webfingerQuery;
 		}
 		$banned = InstanceService::getBannedDomains();
 		$results = Profile::select('username', 'id', 'followers_count', 'domain')
 			->where('username', 'like', $query)
+			->orWhere('webfinger', 'like', $webfingerQuery)
 			->orderByDesc('profiles.followers_count')
 			->offset($offset)
 			->limit($limit)
@@ -123,7 +124,7 @@ class SearchApiV2Service
 		$mastodonMode = self::$mastodonMode;
 		$limit = $this->query->input('limit') ?? 20;
 		$offset = $this->query->input('offset') ?? 0;
-		$query = '%' . $this->query->input('q') . '%';
+        $query = $this->query->input('q') . '%';
 		return Hashtag::where('can_search', true)
 			->where('name', 'like', $query)
 			->offset($offset)

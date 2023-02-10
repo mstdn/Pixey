@@ -370,7 +370,7 @@
 										<div class="p-1 pt-3">
 											<img :src="media[carouselCursor].url" width="100px" height="60px" :class="filter[1]" v-on:click.prevent="toggleFilter($event, filter[1])">
 										</div>
-										<a :class="[media[carouselCursor].filter_class == filter[1] ? 'nav-link text-primary active' : 'nav-link text-muted']" href="#" v-on:click.prevent="toggleFilter($event, filter[1])">i{{filter[0]}}</a>
+										<a :class="[media[carouselCursor].filter_class == filter[1] ? 'nav-link text-primary active' : 'nav-link text-muted']" href="#" v-on:click.prevent="toggleFilter($event, filter[1])">{{filter[0]}}</a>
 									</li>
 								</ul>
 							</div>
@@ -407,7 +407,7 @@
 										<div class="p-1 pt-3">
 											<img :src="media[carouselCursor].url" width="100px" height="60px" :class="filter[1]" v-on:click.prevent="toggleFilter($event, filter[1])">
 										</div>
-										<a :class="[media[carouselCursor].filter_class == filter[1] ? 'nav-link text-primary active' : 'nav-link text-muted']" href="#" v-on:click.prevent="toggleFilter($event, filter[1])">i{{filter[0]}}</a>
+										<a :class="[media[carouselCursor].filter_class == filter[1] ? 'nav-link text-primary active' : 'nav-link text-muted']" href="#" v-on:click.prevent="toggleFilter($event, filter[1])">{{filter[0]}}</a>
 									</li>
 								</ul>
 							</div>
@@ -432,10 +432,19 @@
 								</div>
 							</div>
 						</div>
+						<div class="border-bottom">
+							<p class="px-4 mb-0 py-2 cursor-pointer d-flex justify-content-between" @click="showMediaDescriptionsCard()">
+								<span>Alt Text</span>
+								<span>
+									<i v-if="media && media.filter(m => m.alt).length == media.length" class="fas fa-check-circle fa-lg text-success"></i>
+									<i v-else class="fas fa-chevron-right fa-lg text-lighter"></i>
+								</span>
+							</p>
+						</div>
 						<div class="border-bottom px-4 mb-0 py-2">
 							<div class="d-flex justify-content-between">
 								<div>
-									<div class="text-dark ">Contains NSFW Media</div>
+									<div class="text-dark ">Sensitive/NSFW Media</div>
 								</div>
 								<div>
 									<div class="custom-control custom-switch" style="z-index: 9999;">
@@ -1033,7 +1042,7 @@ export default {
 	},
 
 	beforeMount() {
-		this.filters = window.App.util.filters;
+		this.filters = window.App.util.filters.sort();
 		axios.get('/api/compose/v0/settings')
 		.then(res => {
 			this.composeSettings = res.data;
@@ -1180,6 +1189,13 @@ export default {
 							self.uploading = false;
 							io.value = null;
 							swal('Limit Reached', 'You can upload up to 250 photos or videos per day and you\'ve reached that limit. Please try again later.', 'error');
+							self.page = 2;
+						break;
+
+						case 500:
+							self.uploading = false;
+							io.value = null;
+							swal('Error', e.response.data.message, 'error');
 							self.page = 2;
 						break;
 
