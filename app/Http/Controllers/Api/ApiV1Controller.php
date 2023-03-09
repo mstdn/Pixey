@@ -43,6 +43,7 @@ use App\Transformer\Api\{
 use App\Http\Controllers\FollowerController;
 use League\Fractal\Serializer\ArraySerializer;
 use League\Fractal\Pagination\IlluminatePaginatorAdapter;
+use App\Http\Controllers\AccountController;
 use App\Http\Controllers\StatusController;
 
 use App\Jobs\AvatarPipeline\AvatarOptimize;
@@ -53,6 +54,7 @@ use App\Jobs\SharePipeline\UndoSharePipeline;
 use App\Jobs\StatusPipeline\NewStatusPipeline;
 use App\Jobs\StatusPipeline\StatusDelete;
 use App\Jobs\FollowPipeline\FollowPipeline;
+use App\Jobs\FollowPipeline\UnfollowPipeline;
 use App\Jobs\ImageOptimizePipeline\ImageOptimize;
 use App\Jobs\VideoPipeline\{
 	VideoOptimize,
@@ -465,6 +467,11 @@ class ApiV1Controller extends Controller
 		$account = AccountService::get($id);
 		abort_if(!$account, 404);
 		$pid = $request->user()->profile_id;
+		$this->validate($request, [
+			'limit' => 'sometimes|integer|min:1|max:80'
+		]);
+		$limit = $request->input('limit', 10);
+		$napi = $request->has(self::PF_API_ENTITY_KEY);
 
 		if(intval($pid) !== intval($account['id'])) {
 			if($account['locked']) {
@@ -477,18 +484,56 @@ class ApiV1Controller extends Controller
 				return [];
 			}
 
-			if($request->has('page') && $request->page >= 5) {
-				return [];
+			if($request->has('page') && $request->user()->is_admin == false) {
+				$page = (int) $request->input('page');
+				if(($page * $limit) >= 100) {
+					return [];
+				}
 			}
 		}
+		if($request->has('page')) {
+			$res = DB::table('followers')
+				->select('id', 'profile_id', 'following_id')
+				->whereFollowingId($account['id'])
+				->orderByDesc('id')
+				->simplePaginate($limit)
+				->map(function($follower) use($napi) {
+					return $napi ? AccountService::get($follower->profile_id, true) : AccountService::getMastodon($follower->profile_id, true);
+				})
+				->filter(function($account) {
+					return $account && isset($account['id']);
+				})
+				->values()
+				->toArray();
 
-		$res = DB::table('followers')
+			return $this->json($res);
+		}
+
+		$paginator = DB::table('followers')
 			->select('id', 'profile_id', 'following_id')
 			->whereFollowingId($account['id'])
 			->orderByDesc('id')
-			->simplePaginate(10)
-			->map(function($follower) {
-				return AccountService::getMastodon($follower->profile_id);
+			->cursorPaginate($limit)
+			->withQueryString();
+
+		$link = null;
+
+		if($paginator->onFirstPage()) {
+			if($paginator->hasMorePages()) {
+				$link = '<'.$paginator->nextPageUrl().'>; rel="prev"';
+			}
+		} else {
+			if($paginator->previousPageUrl()) {
+				$link = '<'.$paginator->previousPageUrl().'>; rel="next"';
+			}
+
+			if($paginator->hasMorePages()) {
+				$link .= ($link ? ', ' : '') . '<'.$paginator->nextPageUrl().'>; rel="prev"';
+			}
+		}
+
+		$res = $paginator->map(function($follower) use($napi) {
+				return $napi ? AccountService::get($follower->profile_id, true) : AccountService::getMastodon($follower->profile_id, true);
 			})
 			->filter(function($account) {
 				return $account && isset($account['id']);
@@ -496,7 +541,8 @@ class ApiV1Controller extends Controller
 			->values()
 			->toArray();
 
-		return $this->json($res);
+		$headers = isset($link) ? ['Link' => $link] : [];
+		return $this->json($res, 200, $headers);
 	}
 
 	/**
@@ -512,6 +558,11 @@ class ApiV1Controller extends Controller
 		$account = AccountService::get($id);
 		abort_if(!$account, 404);
 		$pid = $request->user()->profile_id;
+		$this->validate($request, [
+			'limit' => 'sometimes|integer|min:1|max:80'
+		]);
+		$limit = $request->input('limit', 10);
+		$napi = $request->has(self::PF_API_ENTITY_KEY);
 
 		if(intval($pid) !== intval($account['id'])) {
 			if($account['locked']) {
@@ -524,18 +575,56 @@ class ApiV1Controller extends Controller
 				return [];
 			}
 
-			if($request->has('page') && $request->page >= 5) {
-				return [];
+			if($request->has('page') && $request->user()->is_admin == false) {
+				$page = (int) $request->input('page');
+				if(($page * $limit) >= 100) {
+					return [];
+				}
 			}
 		}
 
-		$res = DB::table('followers')
+		if($request->has('page')) {
+			$res = DB::table('followers')
+				->select('id', 'profile_id', 'following_id')
+				->whereProfileId($account['id'])
+				->orderByDesc('id')
+				->simplePaginate($limit)
+				->map(function($follower) use($napi) {
+					return $napi ? AccountService::get($follower->following_id, true) : AccountService::getMastodon($follower->following_id, true);
+				})
+				->filter(function($account) {
+					return $account && isset($account['id']);
+				})
+				->values()
+				->toArray();
+			return $this->json($res);
+		}
+
+		$paginator = DB::table('followers')
 			->select('id', 'profile_id', 'following_id')
 			->whereProfileId($account['id'])
 			->orderByDesc('id')
-			->simplePaginate(10)
-			->map(function($follower) {
-				return AccountService::get($follower->following_id);
+			->cursorPaginate($limit)
+			->withQueryString();
+
+		$link = null;
+
+		if($paginator->onFirstPage()) {
+			if($paginator->hasMorePages()) {
+				$link = '<'.$paginator->nextPageUrl().'>; rel="prev"';
+			}
+		} else {
+			if($paginator->previousPageUrl()) {
+				$link = '<'.$paginator->previousPageUrl().'>; rel="next"';
+			}
+
+			if($paginator->hasMorePages()) {
+				$link .= ($link ? ', ' : '') . '<'.$paginator->nextPageUrl().'>; rel="prev"';
+			}
+		}
+
+		$res = $paginator->map(function($follower) use($napi) {
+				return $napi ? AccountService::get($follower->following_id, true) : AccountService::getMastodon($follower->following_id, true);
 			})
 			->filter(function($account) {
 				return $account && isset($account['id']);
@@ -543,7 +632,8 @@ class ApiV1Controller extends Controller
 			->values()
 			->toArray();
 
-		return $this->json($res);
+		$headers = isset($link) ? ['Link' => $link] : [];
+		return $this->json($res, 200, $headers);
 	}
 
 	/**
@@ -706,8 +796,7 @@ class ApiV1Controller extends Controller
 			if($remote == true && config('federation.activitypub.remoteFollow') == true) {
 				(new FollowerController())->sendFollow($user->profile, $target);
 			}
-			FollowPipeline::dispatch($follower);
-			$target->increment('followers_count');
+			FollowPipeline::dispatch($follower)->onQueue('high');
 		}
 
 		RelationshipService::refresh($user->profile_id, $target->id);
@@ -768,25 +857,11 @@ class ApiV1Controller extends Controller
 			return $this->json($res);
 		}
 
-		if($user->profile->following_count) {
-			$user->profile->decrement('following_count');
-		}
-
-		FollowRequest::whereFollowerId($user->profile_id)
-			->whereFollowingId($target->id)
-			->delete();
-
 		Follower::whereProfileId($user->profile_id)
 			->whereFollowingId($target->id)
 			->delete();
 
-		if(config('instance.timeline.home.cached')) {
-            Cache::forget('pf:timelines:home:' . $user->profile_id);
-        }
-
-		FollowerService::remove($user->profile_id, $target->id);
-
-		$target->decrement('followers_count');
+		UnfollowPipeline::dispatch($user->profile_id, $target->id)->onQueue('high');
 
 		if($remote == true && config('federation.activitypub.remoteFollow') == true) {
 			(new FollowerController())->sendUndoFollow($user->profile, $target);
@@ -939,6 +1014,25 @@ class ApiV1Controller extends Controller
 			abort(400, 'You cannot block an admin');
 		}
 
+		$count = UserFilterService::blockCount($pid);
+		$maxLimit = intval(config('instance.user_filters.max_user_blocks'));
+		if($count == 0) {
+			$filterCount = UserFilter::whereUserId($pid)
+				->whereFilterType('block')
+				->get()
+				->map(function($rec) {
+					return AccountService::get($rec->filterable_id, true);
+				})
+				->filter(function($account) {
+					return $account && isset($account['id']);
+				})
+				->values()
+				->count();
+			abort_if($filterCount >= $maxLimit, 422, AccountController::FILTER_LIMIT_BLOCK_TEXT . $maxLimit . ' accounts');
+		} else {
+			abort_if($count >= $maxLimit, 422, AccountController::FILTER_LIMIT_BLOCK_TEXT . $maxLimit . ' accounts');
+		}
+
 		Follower::whereProfileId($profile->id)->whereFollowingId($pid)->delete();
 		Follower::whereProfileId($pid)->whereFollowingId($profile->id)->delete();
 		Notification::whereProfileId($pid)->whereActorId($profile->id)->delete();
@@ -950,8 +1044,6 @@ class ApiV1Controller extends Controller
 			'filter_type'     => 'block',
 		]);
 
-		Cache::forget("user:filter:list:$pid");
-		Cache::forget("api:local:exp:rec:$pid");
 		RelationshipService::refresh($pid, $id);
 
 		$resource = new Fractal\Resource\Item($profile, new RelationshipTransformer());
@@ -980,15 +1072,17 @@ class ApiV1Controller extends Controller
 
 		$profile = Profile::findOrFail($id);
 
-		UserFilter::whereUserId($pid)
+		$filter = UserFilter::whereUserId($pid)
 			->whereFilterableId($profile->id)
 			->whereFilterableType('App\Profile')
 			->whereFilterType('block')
-			->delete();
+			->first();
 
-		Cache::forget("user:filter:list:$pid");
-		Cache::forget("api:local:exp:rec:$pid");
-		RelationshipService::refresh($pid, $id);
+		if($filter) {
+			$filter->delete();
+			UserFilterService::unblock($pid, $profile->id);
+			RelationshipService::refresh($pid, $id);
+		}
 
 		$resource = new Fractal\Resource\Item($profile, new RelationshipTransformer());
 		$res = $this->fractal->createData($resource)->toArray();
@@ -1622,7 +1716,10 @@ class ApiV1Controller extends Controller
 			], 429);
 		};
 
-		return $this->json(MediaService::get($media->status_id));
+		$fractal = new Fractal\Manager();
+		$fractal->setSerializer(new ArraySerializer());
+		$resource = new Fractal\Resource\Item($media, new MediaTransformer());
+		return $this->json($fractal->createData($resource)->toArray());
 	}
 
 	/**
@@ -1823,6 +1920,25 @@ class ApiV1Controller extends Controller
 
 		$account = Profile::findOrFail($id);
 
+		$count = UserFilterService::muteCount($pid);
+		$maxLimit = intval(config('instance.user_filters.max_user_mutes'));
+		if($count == 0) {
+			$filterCount = UserFilter::whereUserId($pid)
+				->whereFilterType('mute')
+				->get()
+				->map(function($rec) {
+					return AccountService::get($rec->filterable_id, true);
+				})
+				->filter(function($account) {
+					return $account && isset($account['id']);
+				})
+				->values()
+				->count();
+			abort_if($filterCount >= $maxLimit, 422, AccountController::FILTER_LIMIT_MUTE_TEXT . $maxLimit . ' accounts');
+		} else {
+			abort_if($count >= $maxLimit, 422, AccountController::FILTER_LIMIT_MUTE_TEXT . $maxLimit . ' accounts');
+		}
+
 		$filter = UserFilter::firstOrCreate([
 			'user_id'         => $pid,
 			'filterable_id'   => $account->id,
@@ -1830,9 +1946,6 @@ class ApiV1Controller extends Controller
 			'filter_type'     => 'mute',
 		]);
 
-		Cache::forget("user:filter:list:$pid");
-		Cache::forget("feature:discover:posts:$pid");
-		Cache::forget("api:local:exp:rec:$pid");
 		RelationshipService::refresh($pid, $id);
 
 		$resource = new Fractal\Resource\Item($account, new RelationshipTransformer());
@@ -1858,23 +1971,21 @@ class ApiV1Controller extends Controller
             return $this->json(['error' => 'You cannot unmute yourself'], 500);
         }
 
-		$account = Profile::findOrFail($id);
+		$profile = Profile::findOrFail($id);
 
 		$filter = UserFilter::whereUserId($pid)
-			->whereFilterableId($account->id)
+			->whereFilterableId($profile->id)
 			->whereFilterableType('App\Profile')
 			->whereFilterType('mute')
 			->first();
 
 		if($filter) {
 			$filter->delete();
-			Cache::forget("user:filter:list:$pid");
-			Cache::forget("feature:discover:posts:$pid");
-			Cache::forget("api:local:exp:rec:$pid");
+			UserFilterService::unmute($pid, $profile->id);
 			RelationshipService::refresh($pid, $id);
 		}
 
-		$resource = new Fractal\Resource\Item($account, new RelationshipTransformer());
+		$resource = new Fractal\Resource\Item($profile, new RelationshipTransformer());
 		$res = $this->fractal->createData($resource)->toArray();
 		return $this->json($res);
 	}
@@ -1962,10 +2073,10 @@ class ApiV1Controller extends Controller
 	public function timelineHome(Request $request)
 	{
 		$this->validate($request,[
-		  'page'        => 'nullable|integer|max:40',
-		  'min_id'      => 'nullable|integer|min:0|max:' . PHP_INT_MAX,
-		  'max_id'      => 'nullable|integer|min:0|max:' . PHP_INT_MAX,
-		  'limit'       => 'nullable|integer|max:100'
+		  'page'        => 'sometimes|integer|max:40',
+		  'min_id'      => 'sometimes|integer|min:0|max:' . PHP_INT_MAX,
+		  'max_id'      => 'sometimes|integer|min:0|max:' . PHP_INT_MAX,
+		  'limit'       => 'sometimes|integer|min:1|max:80'
 		]);
 
 		$napi = $request->has(self::PF_API_ENTITY_KEY);
@@ -1980,84 +2091,6 @@ class ApiV1Controller extends Controller
 			return $following->push($pid)->toArray();
 		});
 
-		$includeReplies = false;
-		if(config('exp.top')) {
-            $includeReplies = (bool) Redis::zscore('pf:tl:replies', $pid);
-        }
-
-		if(config('instance.timeline.home.cached') && (!$min && !$max)) {
-            $ttl = config('instance.timeline.home.cache_ttl');
-            $res = Cache::remember(
-                'pf:timelines:home:' . $pid,
-                $ttl,
-                function() use(
-                $following,
-                $limit,
-                $pid,
-                $includeReplies
-                ) {
-                return Status::select(
-                    'id',
-                    'uri',
-                    'caption',
-                    'rendered',
-                    'profile_id',
-                    'type',
-                    'in_reply_to_id',
-                    'reblog_of_id',
-                    'is_nsfw',
-                    'scope',
-                    'local',
-                    'reply_count',
-                    'comments_disabled',
-                    'place_id',
-                    'likes_count',
-                    'reblogs_count',
-                    'created_at',
-                    'updated_at'
-                  )
-                  ->when(!$includeReplies, function($q, $includeReplies) {
-                    return $q->whereNull('in_reply_to_id');
-                  })
-                  ->whereIn('type', ['photo', 'photo:album', 'video', 'video:album', 'photo:video:album'])
-                  ->whereIn('profile_id', $following)
-                  ->whereIn('visibility',['public', 'unlisted', 'private'])
-                  ->orderBy('created_at', 'desc')
-                  ->limit($limit)
-                  ->get()
-                  ->map(function($s) {
-                       $status = StatusService::get($s->id, false);
-                       if(!$status) {
-                            return false;
-                       }
-                       return $status;
-                  })
-                  ->filter(function($s) {
-                        return $s && isset($s['account']['id']);
-                  })
-                  ->values()
-                  ->toArray();
-            });
-
-            $res = collect($res)
-                ->map(function($s) use ($pid) {
-                    $status = StatusService::get($s['id'], false);
-                    if(!$status) {
-                        return false;
-                    }
-                    $status['favourited'] = (bool) LikeService::liked($pid, $s['id']);
-                    $status['bookmarked'] = (bool) BookmarkService::get($pid, $s['id']);
-                    $status['reblogged'] = (bool) ReblogService::get($pid, $s['id']);
-                    return $status;
-                })
-                ->filter(function($s) {
-                    return $s && isset($s['account']['id']);
-                })
-                ->values()
-                ->take($limit)
-                ->toArray();
-		}
-
 		if($min || $max) {
 			$dir = $min ? '>' : '<';
 			$id = $min ?? $max;
@@ -2066,21 +2099,24 @@ class ApiV1Controller extends Controller
 				'profile_id',
 				'type',
 				'visibility',
-				'created_at'
+				'in_reply_to_id',
+				'reblog_of_id'
 			)
-			->whereIn('type', ['photo', 'photo:album', 'video', 'video:album', 'photo:video:album'])
 			->where('id', $dir, $id)
-            ->when(!$includeReplies, function($q, $includeReplies) {
-                return $q->whereNull('in_reply_to_id');
-            })
-			->whereIn('profile_id', $following)
+			->whereNull(['in_reply_to_id', 'reblog_of_id'])
+			->whereIntegerInRaw('profile_id', $following)
+			->whereIn('type', ['photo', 'photo:album', 'video', 'video:album', 'photo:video:album'])
 			->whereIn('visibility',['public', 'unlisted', 'private'])
-			->latest()
+			->orderByDesc('id')
 			->take(($limit * 2))
 			->get()
 			->map(function($s) use($pid, $napi) {
-				$status = $napi ? StatusService::get($s['id'], false) : StatusService::getMastodon($s['id'], false);
-				if(!$status || !isset($status['account']) || !isset($status['account']['id'])) {
+				try {
+					$status = $napi ? StatusService::get($s['id'], false) : StatusService::getMastodon($s['id'], false);
+					if(!$status || !isset($status['account']) || !isset($status['account']['id'])) {
+						return false;
+					}
+				} catch(\Exception $e) {
 					return false;
 				}
 
@@ -2101,20 +2137,27 @@ class ApiV1Controller extends Controller
 				'profile_id',
 				'type',
 				'visibility',
-				'created_at'
+				'in_reply_to_id',
+				'reblog_of_id',
 			)
-            ->when(!$includeReplies, function($q, $includeReplies) {
-                return $q->whereNull('in_reply_to_id');
-            })
+			->whereNull(['in_reply_to_id', 'reblog_of_id'])
+			->whereIntegerInRaw('profile_id', $following)
 			->whereIn('type', ['photo', 'photo:album', 'video', 'video:album', 'photo:video:album'])
-			->whereIn('profile_id', $following)
 			->whereIn('visibility',['public', 'unlisted', 'private'])
-			->latest()
+			->orderByDesc('id')
 			->take(($limit * 2))
 			->get()
 			->map(function($s) use($pid, $napi) {
-				$status = $napi ? StatusService::get($s['id'], false) : StatusService::getMastodon($s['id'], false);
-				if(!$status || !isset($status['account']) || !isset($status['account']['id'])) {
+				try {
+					$account = AccountService::get($s['profile_id'], true);
+					if(!$account) {
+						return false;
+					}
+					$status = $napi ? StatusService::get($s['id'], false) : StatusService::getMastodon($s['id'], false);
+					if(!$status || !isset($status['account']) || !isset($status['account']['id'])) {
+						return false;
+					}
+				} catch(\Exception $e) {
 					return false;
 				}
 
@@ -2473,13 +2516,17 @@ class ApiV1Controller extends Controller
 		abort_if(!$request->user(), 403);
 
 		$this->validate($request, [
-			'limit' => 'nullable|integer|min:1|max:100'
+			'limit' => 'sometimes|integer|min:1|max:80'
 		]);
 
-		$limit = $request->input('limit') ?? 10;
+		$limit = $request->input('limit', 10);
 		$user = $request->user();
+		$pid = $user->profile_id;
 		$status = Status::findOrFail($id);
-		$author = intval($status->profile_id) === intval($user->profile_id) || $user->is_admin;
+		$account = AccountService::get($status->profile_id, true);
+		abort_if(!$account, 404);
+		$author = intval($status->profile_id) === intval($pid) || $user->is_admin;
+		$napi = $request->has(self::PF_API_ENTITY_KEY);
 
 		abort_if(
 			!$status->type ||
@@ -2489,9 +2536,13 @@ class ApiV1Controller extends Controller
 
 		if(!$author) {
 			if($status->scope == 'private') {
-				abort_if(!FollowerService::follows($user->profile_id, $status->profile_id), 403);
+				abort_if(!FollowerService::follows($pid, $status->profile_id), 403);
 			} else {
 				abort_if(!in_array($status->scope, ['public','unlisted']), 403);
+			}
+
+			if($request->has('cursor')) {
+				return $this->json([]);
 			}
 		}
 
@@ -2507,26 +2558,34 @@ class ApiV1Controller extends Controller
 		$headers = [];
 		if($author && $res->hasPages()) {
 			$links = '';
-			if($res->previousPageUrl()) {
-				$links = '<' . $res->previousPageUrl() .'>; rel="prev"';
-			}
-
-			if($res->nextPageUrl()) {
-				if(!empty($links)) {
-					$links .= ', ';
+			if($res->onFirstPage()) {
+				if($res->nextPageUrl()) {
+					$links = '<' . $res->nextPageUrl() .'>; rel="prev"';
 				}
-				$links .= '<' . $res->nextPageUrl() .'>; rel="next"';
+			} else {
+				if($res->previousPageUrl()) {
+					$links = '<' . $res->previousPageUrl() .'>; rel="next"';
+				}
+
+				if($res->nextPageUrl()) {
+					if(!empty($links)) {
+						$links .= ', ';
+					}
+					$links .= '<' . $res->nextPageUrl() .'>; rel="prev"';
+				}
 			}
 
 			$headers = ['Link' => $links];
 		}
 
-		$res = $res->map(function($status) use($user) {
-			$account = AccountService::getMastodon($status->profile_id, true);
+		$res = $res->map(function($status) use($pid, $napi) {
+			$account = $napi ? AccountService::get($status->profile_id, true) : AccountService::getMastodon($status->profile_id, true);
 			if(!$account) {
 				return false;
 			}
-			$account['follows'] = $status->profile_id == $user->profile_id ? null : FollowerService::follows($user->profile_id, $status->profile_id);
+			if($napi) {
+				$account['follows'] = $status->profile_id == $pid ? null : FollowerService::follows($pid, $status->profile_id);
+			}
 			return $account;
 		})
 		->filter(function($account) {
@@ -2549,13 +2608,17 @@ class ApiV1Controller extends Controller
 		abort_if(!$request->user(), 403);
 
 		$this->validate($request, [
-			'limit' => 'nullable|integer|min:1|max:100'
+			'limit' => 'nullable|integer|min:1|max:80'
 		]);
 
-		$limit = $request->input('limit') ?? 10;
+		$limit = $request->input('limit', 10);
 		$user = $request->user();
+		$pid = $user->profile_id;
 		$status = Status::findOrFail($id);
-		$author = intval($status->profile_id) === intval($user->profile_id) || $user->is_admin;
+		$account = AccountService::get($status->profile_id, true);
+		abort_if(!$account, 404);
+		$author = intval($status->profile_id) === intval($pid) || $user->is_admin;
+		$napi = $request->has(self::PF_API_ENTITY_KEY);
 
 		abort_if(
 			!$status->type ||
@@ -2565,7 +2628,7 @@ class ApiV1Controller extends Controller
 
 		if(!$author) {
 			if($status->scope == 'private') {
-				abort_if(!FollowerService::follows($user->profile_id, $status->profile_id), 403);
+				abort_if(!FollowerService::follows($pid, $status->profile_id), 403);
 			} else {
 				abort_if(!in_array($status->scope, ['public','unlisted']), 403);
 			}
@@ -2587,29 +2650,39 @@ class ApiV1Controller extends Controller
 		$headers = [];
 		if($author && $res->hasPages()) {
 			$links = '';
-			if($res->previousPageUrl()) {
-				$links = '<' . $res->previousPageUrl() .'>; rel="prev"';
-			}
 
-			if($res->nextPageUrl()) {
-				if(!empty($links)) {
-					$links .= ', ';
+			if($res->onFirstPage()) {
+				if($res->nextPageUrl()) {
+					$links = '<' . $res->nextPageUrl() .'>; rel="prev"';
 				}
-				$links .= '<' . $res->nextPageUrl() .'>; rel="next"';
+			} else {
+				if($res->previousPageUrl()) {
+					$links = '<' . $res->previousPageUrl() .'>; rel="next"';
+				}
+
+				if($res->nextPageUrl()) {
+					if(!empty($links)) {
+						$links .= ', ';
+					}
+					$links .= '<' . $res->nextPageUrl() .'>; rel="prev"';
+				}
 			}
 
 			$headers = ['Link' => $links];
 		}
 
-		$res = $res->map(function($like) use($user) {
-			$account = AccountService::getMastodon($like->profile_id, true);
+		$res = $res->map(function($like) use($pid, $napi) {
+			$account = $napi ? AccountService::get($like->profile_id, true) : AccountService::getMastodon($like->profile_id, true);
 			if(!$account) {
 				return false;
 			}
-			$account['follows'] = $like->profile_id == $user->profile_id ? null : FollowerService::follows($user->profile_id, $like->profile_id);
+
+			if($napi) {
+				$account['follows'] = $like->profile_id == $pid ? null : FollowerService::follows($pid, $like->profile_id);
+			}
 			return $account;
 		})
-		->filter(function($account) use($user) {
+		->filter(function($account) {
 			return $account && isset($account['id']);
 		})
 		->values();
@@ -3149,7 +3222,8 @@ class ApiV1Controller extends Controller
 			'following' => 'nullable'
 		]);
 
-		return $this->json(SearchApiV2Service::query($request, true));
+		$mastodonMode = !$request->has('_pe');
+		return $this->json(SearchApiV2Service::query($request, $mastodonMode));
 	}
 
 	/**

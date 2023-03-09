@@ -62,36 +62,6 @@ class PublicApiController extends Controller
         }
     }
 
-    protected function getLikes($status)
-    {
-        if(false == Auth::check()) {
-            return [];
-        } else {
-            $profile = Auth::user()->profile;
-            if($profile->status) {
-                return [];
-            }
-            $likes = $status->likedBy()->orderBy('created_at','desc')->paginate(10);
-            $collection = new Fractal\Resource\Collection($likes, new AccountTransformer());
-            return $this->fractal->createData($collection)->toArray();
-        }
-    }
-
-    protected function getShares($status)
-    {
-        if(false == Auth::check()) {
-            return [];
-        } else {
-            $profile = Auth::user()->profile;
-            if($profile->status) {
-                return [];
-            }
-            $shares = $status->sharedBy()->orderBy('created_at','desc')->paginate(10);
-            $collection = new Fractal\Resource\Collection($shares, new AccountTransformer());
-            return $this->fractal->createData($collection)->toArray();
-        }
-    }
-
     public function getStatus(Request $request, $id)
     {
 		abort_if(!$request->user(), 403);
@@ -214,41 +184,6 @@ class PublicApiController extends Controller
         $resource->setPaginator(new IlluminatePaginatorAdapter($replies));
         $res = $this->fractal->createData($resource)->toArray();
         return response()->json($res, 200, [], JSON_PRETTY_PRINT);
-    }
-
-    public function statusLikes(Request $request, $username, $id)
-    {
-        abort_if(!$request->user(), 404);
-        $status = Status::findOrFail($id);
-        $this->scopeCheck($status->profile, $status);
-        $page = $request->input('page');
-        if($page && $page >= 3 && $request->user()->profile_id != $status->profile_id) {
-            return response()->json([
-                'data' => []
-            ]);
-        }
-        $likes = $this->getLikes($status);
-        return response()->json([
-            'data' => $likes
-        ]);
-    }
-
-    public function statusShares(Request $request, $username, $id)
-    {
-        abort_if(!$request->user(), 404);
-        $profile = Profile::whereUsername($username)->whereNull('status')->firstOrFail();
-        $status = Status::whereProfileId($profile->id)->findOrFail($id);
-        $this->scopeCheck($profile, $status);
-        $page = $request->input('page');
-        if($page && $page >= 3 && $request->user()->profile_id != $status->profile_id) {
-            return response()->json([
-                'data' => []
-            ]);
-        }
-        $shares = $this->getShares($status);
-        return response()->json([
-            'data' => $shares
-        ]);
     }
 
     protected function scopeCheck(Profile $profile, Status $status)
@@ -473,96 +408,6 @@ class PublicApiController extends Controller
 
         $textOnlyReplies = false;
 
-        if(config('exp.top')) {
-            $textOnlyReplies = (bool) Redis::zscore('pf:tl:replies', $pid);
-            $textOnlyPosts = (bool) Redis::zscore('pf:tl:top', $pid);
-
-            if($textOnlyPosts) {
-                array_push($types, 'text');
-            }
-        }
-
-        if(config('exp.polls') == true) {
-            array_push($types, 'poll');
-        }
-
-        if(config('instance.timeline.home.cached') && $limit == 6 && (!$min && !$max)) {
-            $ttl = config('instance.timeline.home.cache_ttl');
-            $res = Cache::remember(
-                'pf:timelines:home:' . $pid,
-                $ttl,
-                function() use(
-                $types,
-                $textOnlyReplies,
-                $following,
-                $limit,
-                $filtered,
-                $user
-                ) {
-                return Status::select(
-                    'id',
-                    'uri',
-                    'caption',
-                    'rendered',
-                    'profile_id',
-                    'type',
-                    'in_reply_to_id',
-                    'reblog_of_id',
-                    'is_nsfw',
-                    'scope',
-                    'local',
-                    'reply_count',
-                    'comments_disabled',
-                    'place_id',
-                    'likes_count',
-                    'reblogs_count',
-                    'created_at',
-                    'updated_at'
-                  )
-                  ->whereIn('type', $types)
-                  ->when(!$textOnlyReplies, function($q, $textOnlyReplies) {
-                    return $q->whereNull('in_reply_to_id');
-                  })
-                  ->whereIn('profile_id', $following)
-                  ->whereIn('visibility',['public', 'unlisted', 'private'])
-                  ->orderBy('created_at', 'desc')
-                  ->limit($limit)
-                  ->get()
-                  ->map(function($s) use ($user) {
-                       $status = StatusService::get($s->id, false);
-                       if(!$status) {
-                            return false;
-                       }
-                       return $status;
-                  })
-                  ->filter(function($s) use($filtered) {
-                        return $s && in_array($s['account']['id'], $filtered) == false;
-                  })
-                  ->values()
-                  ->toArray();
-            });
-
-            $res = collect($res)
-                ->map(function($s) use ($user) {
-                    $status = StatusService::get($s['id'], false);
-                    if(!$status) {
-                        return false;
-                    }
-                    $status['favourited'] = (bool) LikeService::liked($user->profile_id, $s['id']);
-                    $status['bookmarked'] = (bool) BookmarkService::get($user->profile_id, $s['id']);
-                    $status['reblogged'] = (bool) ReblogService::get($user->profile_id, $s['id']);
-                    return $status;
-                })
-                ->filter(function($s) use($filtered) {
-                    return $s && in_array($s['account']['id'], $filtered) == false;
-                })
-                ->values()
-                ->take($limit)
-                ->toArray();
-
-            return $res;
-        }
-
         if($min || $max) {
             $dir = $min ? '>' : '<';
             $id = $min ?? $max;
@@ -597,10 +442,14 @@ class PublicApiController extends Controller
                       ->limit($limit)
                       ->get()
                       ->map(function($s) use ($user) {
+                      	try {
                            $status = StatusService::get($s->id, false);
                            if(!$status) {
                            		return false;
                            }
+                       } catch(\Exception $e) {
+                       	 return false;
+                       }
                            $status['favourited'] = (bool) LikeService::liked($user->profile_id, $s->id);
                            $status['bookmarked'] = (bool) BookmarkService::get($user->profile_id, $s->id);
                            $status['reblogged'] = (bool) ReblogService::get($user->profile_id, $s->id);
@@ -642,10 +491,14 @@ class PublicApiController extends Controller
                       ->limit($limit)
                       ->get()
                       ->map(function($s) use ($user) {
-                           $status = StatusService::get($s->id, false);
-                           if(!$status) {
-                           		return false;
-                           }
+	                      	try {
+	                           $status = StatusService::get($s->id, false);
+	                           if(!$status) {
+	                           		return false;
+	                           }
+	                       } catch(\Exception $e) {
+	                       		return false;
+	                       }
                            $status['favourited'] = (bool) LikeService::liked($user->profile_id, $s->id);
                            $status['bookmarked'] = (bool) BookmarkService::get($user->profile_id, $s->id);
                            $status['reblogged'] = (bool) ReblogService::get($user->profile_id, $s->id);
@@ -809,68 +662,6 @@ class PublicApiController extends Controller
     {
         $res = AccountService::get($id);
         return response()->json($res);
-    }
-
-    public function accountFollowers(Request $request, $id)
-    {
-		abort_if(!$request->user(), 403);
-		$account = AccountService::get($id, true);
-		abort_if(!$account, 404);
-		$pid = $request->user()->profile_id;
-
-		if($pid != $account['id']) {
-			if($account['locked']) {
-				if(!FollowerService::follows($pid, $account['id'])) {
-					return [];
-				}
-			}
-
-			if(AccountService::hiddenFollowers($id)) {
-				return [];
-			}
-
-			if($request->has('page') && $request->page >= 10) {
-				return [];
-			}
-		}
-
-        $res = collect(FollowerService::followersPaginate($account['id'], $request->input('page', 1)))
-            ->map(fn($id) => AccountService::get($id, true))
-            ->filter()
-            ->values();
-
-		return response()->json($res);
-    }
-
-    public function accountFollowing(Request $request, $id)
-    {
-		abort_if(!$request->user(), 403);
-		$account = AccountService::get($id, true);
-		abort_if(!$account, 404);
-		$pid = $request->user()->profile_id;
-
-		if($pid != $account['id']) {
-			if($account['locked']) {
-				if(!FollowerService::follows($pid, $account['id'])) {
-					return [];
-				}
-			}
-
-			if(AccountService::hiddenFollowing($id)) {
-				return [];
-			}
-
-			if($request->has('page') && $request->page >= 10) {
-				return [];
-			}
-		}
-
-        $res = collect(FollowerService::followingPaginate($account['id'], $request->input('page', 1)))
-            ->map(fn($id) => AccountService::get($id, true))
-            ->filter()
-            ->values();
-
-		return response()->json($res);
     }
 
     public function accountStatuses(Request $request, $id)
