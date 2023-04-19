@@ -1,6 +1,32 @@
 # Release Notes
 
-## [Unreleased](https://github.com/pixelfed/pixelfed/compare/v0.11.4...dev)
+## [Unreleased](https://github.com/pixelfed/pixelfed/compare/v0.11.5...dev)
+
+### Added
+- New media:fix-nonlocal-driver command. Fixes s3 media created with invalid FILESYSTEM_DRIVER=s3 configuration ([672cccd4](https://github.com/pixelfed/pixelfed/commit/672cccd4))
+- New landing page design ([09c0032b](https://github.com/pixelfed/pixelfed/commit/09c0032b))
+
+### Updates
+- Update ApiV1Controller, fix blocking remote accounts. Closes #4256 ([8e71e0c0](https://github.com/pixelfed/pixelfed/commit/8e71e0c0))
+- Update ComposeController, fix postgres location search. Closes #4242 and #4239 ([64a4a006](https://github.com/pixelfed/pixelfed/commit/64a4a006))
+- Update app.js, add title attribute to iframe embeds to comply with accessibility requirements ([4d72b9e3](https://github.com/pixelfed/pixelfed/commit/4d72b9e3))
+- Update MediaPathService, fix story path ([aebbad96](https://github.com/pixelfed/pixelfed/commit/aebbad96))
+- Update Story v1.1 api endpoints ([855e9626](https://github.com/pixelfed/pixelfed/commit/855e9626))
+- Update ApiV1Controller, filter mute/blocks on statuses/context and statuses/replies endpoints ([73aa01e8](https://github.com/pixelfed/pixelfed/commit/73aa01e8))
+- Update filesystems, store all files as public by default and add default permissions. Fixes #4273, #4275. Closes #3825 ([22da2647](https://github.com/pixelfed/pixelfed/commit/22da2647))
+- Update Profile model, fix avatar url path generation. Fixes #4041, Fixes #4031, Fixes #3523 ([28bf8649](https://github.com/pixelfed/pixelfed/commit/28bf8649))
+- Update filesystem config, change FILESYSTEM_DRIVER env variable to DANGEROUSLY_SET_FILESYSTEM_DRIVER and remove from default env configs. Changing the default filesystem should be avoided, use FILESYSTEM_CLOUD for s3 support, otherwise you can break things ([573c88d7](https://github.com/pixelfed/pixelfed/commit/573c88d7))
+- Update MediaS3GarbageCollector, fix handle ([2eee36cf](https://github.com/pixelfed/pixelfed/commit/2eee36cf))
+- Update StatusController, allow users to delete replies to posts ([738925c2](https://github.com/pixelfed/pixelfed/commit/738925c2))
+- Update admin autospam/report email templates, remove image previews ([76be49ac](https://github.com/pixelfed/pixelfed/commit/76be49ac))
+- Update LandingService, enable landing directory/explore feed by default and move configuration to config/instance.php file ([780f2507](https://github.com/pixelfed/pixelfed/commit/780f2507))
+- Update ImageOptimizePipeline, improve support for disabling image optimizations ([e76289e4](https://github.com/pixelfed/pixelfed/commit/e76289e4))
+- Update LandingController, fix config variable names ([b716926b](https://github.com/pixelfed/pixelfed/commit/b716926b))
+- Update Privacy Settings, add Directory setting ([634c15e4](https://github.com/pixelfed/pixelfed/commit/634c15e4))
+- Update site config ([6d59dc8e](https://github.com/pixelfed/pixelfed/commit/6d59dc8e))
+-  ([](https://github.com/pixelfed/pixelfed/commit/))
+
+## [v0.11.5 (2023-03-25)](https://github.com/pixelfed/pixelfed/compare/v0.11.4...v0.11.5)
 
 ### New Features
 - Mobile App Registration ([#3829](https://github.com/pixelfed/pixelfed/pull/3829))
@@ -11,6 +37,8 @@
 - Optional home feed caching ([3328b367](https://github.com/pixelfed/pixelfed/commit/3328b367))
 - Admin Invites ([b73ca9a1](https://github.com/pixelfed/pixelfed/commit/b73ca9a1))
 - Hashtag administration ([84872311](https://github.com/pixelfed/pixelfed/commit/84872311))
+- Admin report email notifications ([4e1d0ed5](https://github.com/pixelfed/pixelfed/commit/4e1d0ed5))
+- Add Licenses help page, fixes #4238 ([3c712a70](https://github.com/pixelfed/pixelfed/commit/3c712a70))
 
 ### Updates
 - Update ApiV1Controller, include self likes in favourited_by endpoint ([58b331d2](https://github.com/pixelfed/pixelfed/commit/58b331d2))
@@ -126,7 +154,22 @@
 - Update FollowerController, remove deprecated /i/follow endpoint ([4739d614](https://github.com/pixelfed/pixelfed/commit/4739d614))
 - Update queue config, set "after_commit" to true ([304ea956](https://github.com/pixelfed/pixelfed/commit/304ea956))
 - Update ApiV1Controller, fix home timeline bug ([a8ec8445](https://github.com/pixelfed/pixelfed/commit/a8ec8445))
--  ([](https://github.com/pixelfed/pixelfed/commit/))
+- Update ApiV1Controller, increase home timeline max limit to 100 to fix compatibility with mastoapi ([5cf9ba78](https://github.com/pixelfed/pixelfed/commit/5cf9ba78))
+- Update ApiV1Controller, preserve album order. Fixes #3708 ([deb26971](https://github.com/pixelfed/pixelfed/commit/deb26971))
+- Update site config endpoint ([f9be48d6](https://github.com/pixelfed/pixelfed/commit/f9be48d6))
+- Update Portfolios, add ActivityPub + RSS support, light mode, style customization and more ([5ad0d883](https://github.com/pixelfed/pixelfed/commit/5ad0d883))
+- Update atom feed, improve cache expiry and fix double encoding bug. Fixes #4121 ([467c9d75](https://github.com/pixelfed/pixelfed/commit/467c9d75))
+- Update email settings, add dangerzone middleware to prompt for password before you can change your email address. Fixes #4101 ([186ba7f0](https://github.com/pixelfed/pixelfed/commit/186ba7f0))
+- Update InboxPipelines, improve handling of missing signature validation headers ([419c0fb0](https://github.com/pixelfed/pixelfed/commit/419c0fb0))
+- Update admin instances dashboard ([ecfc0766](https://github.com/pixelfed/pixelfed/commit/ecfc0766))
+- Update ap helpers, fix album order bug by setting media order ([871f798c](https://github.com/pixelfed/pixelfed/commit/871f798c))
+- Update image pipeline, dispatch jobs to mmo queue and add "replace_id" param to v2/media endpoint to dispatch delayed MediaDeletePipeline job for original media id to improve media gc on supported clients ([5a67e9f9](https://github.com/pixelfed/pixelfed/commit/5a67e9f9))
+- Update admin instance management, improve filtering/sorting and add import/export support ([d5d9500d](https://github.com/pixelfed/pixelfed/commit/d5d9500d))
+- Update Post component, show state error when status account is null or missing ([e6dc6234](https://github.com/pixelfed/pixelfed/commit/e6dc6234))
+- Update private profile view, add rel=me support, hide avatar/bio when not logged in and add robots meta tag to block search engine indexing on private profiles ([ab4bb9a0](https://github.com/pixelfed/pixelfed/commit/ab4bb9a0))
+- Update settings, set maxlength on name and bio inputs. Fixes #4248 ([558700fc](https://github.com/pixelfed/pixelfed/commit/558700fc))
+- Update api routes, add post method support to /api/v1/accounts/update_credentials to properly handle binary form data (avatars). Fixes #4250 ([1ae19ea5](https://github.com/pixelfed/pixelfed/commit/1ae19ea5))
+- Update ApiV1Controller, improve timeline account hydration ([4e79c772](https://github.com/pixelfed/pixelfed/commit/4e79c772))
 
 ## [v0.11.4 (2022-10-04)](https://github.com/pixelfed/pixelfed/compare/v0.11.3...v0.11.4)
 

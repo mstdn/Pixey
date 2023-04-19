@@ -49,6 +49,7 @@ use App\Http\Controllers\StatusController;
 use App\Jobs\AvatarPipeline\AvatarOptimize;
 use App\Jobs\CommentPipeline\CommentPipeline;
 use App\Jobs\LikePipeline\LikePipeline;
+use App\Jobs\MediaPipeline\MediaDeletePipeline;
 use App\Jobs\SharePipeline\SharePipeline;
 use App\Jobs\SharePipeline\UndoSharePipeline;
 use App\Jobs\StatusPipeline\NewStatusPipeline;
@@ -96,6 +97,7 @@ use App\Jobs\FollowPipeline\FollowAcceptPipeline;
 use App\Jobs\FollowPipeline\FollowRejectPipeline;
 use Illuminate\Support\Facades\RateLimiter;
 use Purify;
+use Carbon\Carbon;
 
 class ApiV1Controller extends Controller
 {
@@ -258,7 +260,7 @@ class ApiV1Controller extends Controller
 				$file = $request->file('avatar');
 				$path = "public/avatars/{$profile->id}";
 				$name = strtolower(str_random(6)). '.' . $file->guessExtension();
-				$request->file('avatar')->storeAs($path, $name);
+				$request->file('avatar')->storePubliclyAs($path, $name);
 				$av->media_path = "{$path}/{$name}";
 				$av->save();
 				Cache::forget("avatar:{$profile->id}");
@@ -1010,7 +1012,7 @@ class ApiV1Controller extends Controller
 
 		$profile = Profile::findOrFail($id);
 
-		if($profile->user->is_admin == true) {
+		if($profile->user && $profile->user->is_admin == true) {
 			abort(400, 'You cannot block an admin');
 		}
 
@@ -1045,7 +1047,7 @@ class ApiV1Controller extends Controller
 		]);
 
 		RelationshipService::refresh($pid, $id);
-
+		UserFilterService::block($pid, $id);
 		$resource = new Fractal\Resource\Item($profile, new RelationshipTransformer());
 		$res = $this->fractal->createData($resource)->toArray();
 
@@ -1608,7 +1610,7 @@ class ApiV1Controller extends Controller
 		}
 
 		$storagePath = MediaPathService::get($user, 2);
-		$path = $photo->store($storagePath);
+		$path = $photo->storePublicly($storagePath);
 		$hash = \hash_file('sha256', $photo);
 		$license = null;
 		$mime = $photo->getMimeType();
@@ -1654,11 +1656,11 @@ class ApiV1Controller extends Controller
 		switch ($media->mime) {
 			case 'image/jpeg':
 			case 'image/png':
-				ImageOptimize::dispatch($media);
+				ImageOptimize::dispatch($media)->onQueue('mmo');
 				break;
 
 			case 'video/mp4':
-				VideoThumbnail::dispatch($media);
+				VideoThumbnail::dispatch($media)->onQueue('mmo');
 				$preview_url = '/storage/no-preview.png';
 				$url = '/storage/no-preview.png';
 				break;
@@ -1767,7 +1769,8 @@ class ApiV1Controller extends Controller
 			],
 		  'filter_name' => 'nullable|string|max:24',
 		  'filter_class' => 'nullable|alpha_dash|max:24',
-		  'description' => 'nullable|string|max:' . config_cache('pixelfed.max_altext_length')
+		  'description' => 'nullable|string|max:' . config_cache('pixelfed.max_altext_length'),
+		  'replace_id' => 'sometimes'
 		]);
 
 		$user = $request->user();
@@ -1812,7 +1815,7 @@ class ApiV1Controller extends Controller
 		}
 
 		$storagePath = MediaPathService::get($user, 2);
-		$path = $photo->store($storagePath);
+		$path = $photo->storePublicly($storagePath);
 		$hash = \hash_file('sha256', $photo);
 		$license = null;
 		$mime = $photo->getMimeType();
@@ -1828,6 +1831,21 @@ class ApiV1Controller extends Controller
 		}
 
 		abort_if(MediaBlocklistService::exists($hash) == true, 451);
+
+		if($request->has('replace_id')) {
+			$rpid = $request->input('replace_id');
+			$removeMedia = Media::whereNull('status_id')
+				->whereUserId($user->id)
+				->whereProfileId($profile->id)
+				->where('created_at', '>', now()->subHours(2))
+				->find($rpid);
+			if($removeMedia) {
+				$dateTime = Carbon::now();
+				MediaDeletePipeline::dispatch($removeMedia)
+					->onQueue('mmo')
+					->delay($dateTime->addMinutes(15));
+			}
+		}
 
 		$media = new Media();
 		$media->status_id = null;
@@ -1848,11 +1866,11 @@ class ApiV1Controller extends Controller
 		switch ($media->mime) {
 			case 'image/jpeg':
 			case 'image/png':
-				ImageOptimize::dispatch($media);
+				ImageOptimize::dispatch($media)->onQueue('mmo');
 				break;
 
 			case 'video/mp4':
-				VideoThumbnail::dispatch($media);
+				VideoThumbnail::dispatch($media)->onQueue('mmo');
 				$preview_url = '/storage/no-preview.png';
 				$url = '/storage/no-preview.png';
 				break;
@@ -2076,7 +2094,7 @@ class ApiV1Controller extends Controller
 		  'page'        => 'sometimes|integer|max:40',
 		  'min_id'      => 'sometimes|integer|min:0|max:' . PHP_INT_MAX,
 		  'max_id'      => 'sometimes|integer|min:0|max:' . PHP_INT_MAX,
-		  'limit'       => 'sometimes|integer|min:1|max:80'
+		  'limit'       => 'sometimes|integer|min:1|max:100'
 		]);
 
 		$napi = $request->has(self::PF_API_ENTITY_KEY);
@@ -2112,6 +2130,10 @@ class ApiV1Controller extends Controller
 			->get()
 			->map(function($s) use($pid, $napi) {
 				try {
+					$account = $napi ? AccountService::get($s['profile_id'], true) : AccountService::getMastodon($s['profile_id'], true);
+					if(!$account) {
+						return false;
+					}
 					$status = $napi ? StatusService::get($s['id'], false) : StatusService::getMastodon($s['id'], false);
 					if(!$status || !isset($status['account']) || !isset($status['account']['id'])) {
 						return false;
@@ -2119,6 +2141,8 @@ class ApiV1Controller extends Controller
 				} catch(\Exception $e) {
 					return false;
 				}
+
+				$status['account'] = $account;
 
 				if($pid) {
 					$status['favourited'] = (bool) LikeService::liked($pid, $s['id']);
@@ -2149,7 +2173,7 @@ class ApiV1Controller extends Controller
 			->get()
 			->map(function($s) use($pid, $napi) {
 				try {
-					$account = AccountService::get($s['profile_id'], true);
+					$account = $napi ? AccountService::get($s['profile_id'], true) : AccountService::getMastodon($s['profile_id'], true);
 					if(!$account) {
 						return false;
 					}
@@ -2160,6 +2184,8 @@ class ApiV1Controller extends Controller
 				} catch(\Exception $e) {
 					return false;
 				}
+
+				$status['account'] = $account;
 
 				if($pid) {
 					$status['favourited'] = (bool) LikeService::liked($pid, $s['id']);
@@ -2271,10 +2297,21 @@ class ApiV1Controller extends Controller
 			}
 		})
 		->map(function($k) use($user, $napi) {
-			$status = $napi ? StatusService::get($k) : StatusService::getMastodon($k);
-			if(!$status || !isset($status['account']) || !isset($status['account']['id'])) {
+			try {
+				$status = $napi ? StatusService::get($k) : StatusService::getMastodon($k);
+				if(!$status || !isset($status['account']) || !isset($status['account']['id'])) {
+					return false;
+				}
+			} catch(\Exception $e) {
 				return false;
 			}
+
+			$account = $napi ? AccountService::get($status['account']['id'], true) : AccountService::getMastodon($status['account']['id'], true);
+			if(!$account) {
+				return false;
+			}
+
+			$status['account'] = $account;
 
 			if($user) {
 				$status['favourited'] = (bool) LikeService::liked($user->profile_id, $k);
@@ -2464,6 +2501,8 @@ class ApiV1Controller extends Controller
 		}
 
 		if($status['replies_count']) {
+			$filters = UserFilterService::filters($pid);
+
 			$descendants = DB::table('statuses')
 				->where('in_reply_to_id', $id)
 				->limit(20)
@@ -2471,8 +2510,8 @@ class ApiV1Controller extends Controller
 				->map(function($sid) {
 					return StatusService::getMastodon($sid, false);
 				})
-				->filter(function($post) {
-					return $post && isset($post['account']);
+				->filter(function($post) use($filters) {
+					return $post && isset($post['account'], $post['account']['id']) && !in_array($post['account']['id'], $filters);
 				})
 				->map(function($status) use($pid) {
 					$status['favourited'] = LikeService::liked($pid, $status['id']);
@@ -2819,6 +2858,7 @@ class ApiV1Controller extends Controller
 				if($m->profile_id !== $user->profile_id || $m->status_id) {
 					abort(403, 'Invalid media id');
 				}
+				$m->order = $k + 1;
 				$m->status_id = $status->id;
 				$m->save();
 				array_push($mimes, $m->mime);
@@ -3320,7 +3360,11 @@ class ApiV1Controller extends Controller
 				->cursorPaginate($limit);
 		}
 
-		$data = $ids->map(function($post) use($pid) {
+		$filters = UserFilterService::filters($pid);
+		$data = $ids->filter(function($post) use($filters) {
+			return !in_array($post->profile_id, $filters);
+		})
+		->map(function($post) use($pid) {
 			$status = StatusService::get($post->id, false);
 
 			if(!$status || !isset($status['id'])) {

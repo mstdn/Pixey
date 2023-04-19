@@ -26,7 +26,7 @@ Route::group(['prefix' => 'api'], function() use($middleware) {
 		Route::get('bookmarks', 'Api\ApiV1Controller@bookmarks')->middleware($middleware);
 
 		Route::get('accounts/verify_credentials', 'Api\ApiV1Controller@verifyCredentials')->middleware($middleware);
-		Route::patch('accounts/update_credentials', 'Api\ApiV1Controller@accountUpdateCredentials')->middleware($middleware);
+		Route::match(['post', 'patch'], 'accounts/update_credentials', 'Api\ApiV1Controller@accountUpdateCredentials')->middleware($middleware);
 		Route::get('accounts/relationships', 'Api\ApiV1Controller@accountRelationshipsById')->middleware($middleware);
 		Route::get('accounts/search', 'Api\ApiV1Controller@accountSearch')->middleware($middleware);
 		Route::get('accounts/{id}/statuses', 'Api\ApiV1Controller@accountStatusesById')->middleware($middleware);
@@ -142,7 +142,12 @@ Route::group(['prefix' => 'api'], function() use($middleware) {
 		});
 
 		Route::group(['prefix' => 'stories'], function () use($middleware) {
-			Route::get('recent', 'StoryController@recent')->middleware($middleware);
+			Route::get('carousel', 'Stories\StoryApiV1Controller@carousel')->middleware($middleware);
+			Route::post('add', 'Stories\StoryApiV1Controller@add')->middleware($middleware);
+			Route::post('publish', 'Stories\StoryApiV1Controller@publish')->middleware($middleware);
+			Route::post('seen', 'Stories\StoryApiV1Controller@viewed')->middleware($middleware);
+			Route::post('self-expire/{id}', 'Stories\StoryApiV1Controller@delete')->middleware($middleware);
+			Route::post('comment', 'Stories\StoryApiV1Controller@comment')->middleware($middleware);
 		});
 
 		Route::group(['prefix' => 'compose'], function () use($middleware) {
@@ -208,5 +213,9 @@ Route::group(['prefix' => 'api'], function() use($middleware) {
 		Route::get('instances/get', 'Api\AdminApiController@getInstance')->middleware($middleware);
 		Route::post('instances/moderate', 'Api\AdminApiController@moderateInstance')->middleware($middleware);
 		Route::post('instances/refresh-stats', 'Api\AdminApiController@refreshInstanceStats')->middleware($middleware);
+	});
+
+	Route::group(['prefix' => 'landing/v1'], function() use($middleware) {
+		Route::get('directory', 'LandingController@getDirectoryApi');
 	});
 });
