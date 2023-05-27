@@ -8,6 +8,7 @@ use App\{
 	DirectMessage,
 	Follower,
 	FollowRequest,
+	Instance,
 	Like,
 	Notification,
 	Media,
@@ -27,6 +28,7 @@ use App\Jobs\DeletePipeline\DeleteRemoteProfilePipeline;
 use App\Jobs\DeletePipeline\DeleteRemoteStatusPipeline;
 use App\Jobs\StoryPipeline\StoryExpire;
 use App\Jobs\StoryPipeline\StoryFetch;
+use App\Jobs\StatusPipeline\StatusRemoteUpdatePipeline;
 
 use App\Util\ActivityPub\Validator\Accept as AcceptValidator;
 use App\Util\ActivityPub\Validator\Add as AddValidator;
@@ -42,6 +44,7 @@ use App\Services\StatusService;
 use App\Services\UserFilterService;
 use App\Services\NetworkTimelineService;
 use App\Models\Conversation;
+use App\Models\RemoteReport;
 use App\Jobs\ProfilePipeline\IncrementPostCount;
 use App\Jobs\ProfilePipeline\DecrementPostCount;
 
@@ -122,9 +125,13 @@ class Inbox
 				$this->handleStoryReplyActivity();
 				break;
 
-			// case 'Update':
-			// 	(new UpdateActivity($this->payload, $this->profile))->handle();
-			// 	break;
+			case 'Flag':
+				$this->handleFlagActivity();
+				break;
+
+			case 'Update':
+				$this->handleUpdateActivity();
+				break;
 
 			default:
 				// TODO: decide how to handle invalid verbs.
@@ -178,7 +185,7 @@ class Inbox
 
 		switch($obj['type']) {
 			case 'Story':
-				StoryFetch::dispatchNow($this->payload);
+				StoryFetch::dispatch($this->payload);
 			break;
 		}
 
@@ -191,12 +198,6 @@ class Inbox
 		$actor = $this->actorFirstOrCreate($this->payload['actor']);
 		if(!$actor || $actor->domain == null) {
 			return;
-		}
-
-		if($actor->followers_count == 0) {
-			if(FollowerService::followerCount($actor->id, true) == 0) {
-				return;
-			}
 		}
 
 		if(!isset($activity['to'])) {
@@ -483,8 +484,6 @@ class Inbox
 			$notification->profile_id = $profile->id;
 			$notification->actor_id = $actor->id;
 			$notification->action = 'dm';
-			$notification->message = $dm->toText();
-			$notification->rendered = $dm->toHtml();
 			$notification->item_id = $dm->id;
 			$notification->item_type = "App\DirectMessage";
 			$notification->save();
@@ -594,9 +593,6 @@ class Inbox
 				'action' => 'share',
 				'item_id' => $parent->id,
 				'item_type' => 'App\Status',
-			], [
-				'message' => $status->replyToText(),
-				'rendered' => $status->replyToHtml(),
 			]
 		);
 
@@ -703,7 +699,7 @@ class Inbox
 							return;
 						}
 						$status = Status::whereProfileId($profile->id)
-							->whereUri($id)
+							->whereObjectUrl($id)
 							->first();
 						if(!$status) {
 							return;
@@ -1023,8 +1019,6 @@ class Inbox
 		$n->item_id = $dm->id;
 		$n->item_type = 'App\DirectMessage';
 		$n->action = 'story:react';
-		$n->message = "{$actorProfile->username} reacted to your story";
-		$n->rendered = "{$actorProfile->username} reacted to your story";
 		$n->save();
 
 		return;
@@ -1134,10 +1128,99 @@ class Inbox
 		$n->item_id = $dm->id;
 		$n->item_type = 'App\DirectMessage';
 		$n->action = 'story:comment';
-		$n->message = "{$actorProfile->username} commented on story";
-		$n->rendered = "{$actorProfile->username} commented on story";
 		$n->save();
 
 		return;
+	}
+
+	public function handleFlagActivity()
+	{
+		if(!isset(
+			$this->payload['id'],
+			$this->payload['type'],
+			$this->payload['actor'],
+			$this->payload['object']
+		)) {
+			return;
+		}
+
+		$id = $this->payload['id'];
+		$actor = $this->payload['actor'];
+
+		if(Helpers::validateLocalUrl($id) || parse_url($id, PHP_URL_HOST) !== parse_url($actor, PHP_URL_HOST)) {
+			return;
+		}
+
+		$content = isset($this->payload['content']) ? Purify::clean($this->payload['content']) : null;
+		$object = $this->payload['object'];
+
+		if(empty($object) || (!is_array($object) && !is_string($object))) {
+			return;
+		}
+
+		if(is_array($object) && count($object) > 100) {
+			return;
+		}
+
+		$objects = collect([]);
+		$accountId = null;
+
+		foreach($object as $objectUrl) {
+			if(!Helpers::validateLocalUrl($objectUrl)) {
+				continue;
+			}
+
+			if(str_contains($objectUrl, '/users/')) {
+				$username = last(explode('/', $objectUrl));
+				$profileId = Profile::whereUsername($username)->first();
+				if($profileId) {
+					$accountId = $profileId->id;
+				}
+			} else if(str_contains($objectUrl, '/p/')) {
+				$postId = last(explode('/', $objectUrl));
+				$objects->push($postId);
+			} else {
+				continue;
+			}
+		}
+
+		if(!$accountId || !$objects->count()) {
+			return;
+		}
+
+		$instanceHost = parse_url($id, PHP_URL_HOST);
+
+		$instance = Instance::updateOrCreate([
+			'domain' => $instanceHost
+		]);
+
+		$report = new RemoteReport;
+		$report->status_ids = $objects->toArray();
+		$report->comment = $content;
+		$report->account_id = $accountId;
+		$report->uri = $id;
+		$report->instance_id = $instance->id;
+		$report->report_meta = [
+			'actor' => $actor,
+			'object' => $object
+		];
+		$report->save();
+
+		return;
+	}
+
+	public function handleUpdateActivity()
+	{
+		$activity = $this->payload['object'];
+
+		if(!isset($activity['type'], $activity['id'])) {
+			return;
+		}
+
+		if($activity['type'] === 'Note') {
+			if(Status::whereObjectUrl($activity['id'])->exists()) {
+				StatusRemoteUpdatePipeline::dispatch($activity);
+			}
+		}
 	}
 }

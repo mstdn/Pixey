@@ -46,7 +46,7 @@ class ContactController extends Controller
 		$contact->response = '';
 		$contact->save();
 
-		ContactPipeline::dispatchNow($contact);
+		ContactPipeline::dispatch($contact);
 
 		return redirect()->back()->with('status', 'Success - Your message has been sent to admins.');
 	}

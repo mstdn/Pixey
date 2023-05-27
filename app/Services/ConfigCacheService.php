@@ -65,6 +65,13 @@ class ConfigCacheService
 				'pixelfed.directory.latest_response',
 				'pixelfed.directory.is_synced',
 				'pixelfed.directory.testimonials',
+
+				'instance.landing.show_directory',
+				'instance.landing.show_explore',
+				'instance.admin.pid',
+				'instance.banner.blurhash',
+
+				'autospam.nlp.enabled',
 				// 'system.user_mode'
 			];
 

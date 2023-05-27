@@ -94,6 +94,8 @@ Route::domain(config('pixelfed.domain.admin'))->prefix('i/admin')->group(functio
 
 	Route::get('directory/home', 'AdminController@directoryHome')->name('admin.directory');
 
+	Route::get('autospam/home', 'AdminController@autospamHome')->name('admin.autospam');
+
 	Route::prefix('api')->group(function() {
 		Route::get('stats', 'AdminController@getStats');
 		Route::get('accounts', 'AdminController@getAccounts');
@@ -122,6 +124,24 @@ Route::domain(config('pixelfed.domain.admin'))->prefix('i/admin')->group(functio
 		Route::post('instances/refresh-stats', 'AdminController@postInstanceRefreshStatsApi');
 		Route::get('instances/download-backup', 'AdminController@downloadBackup');
 		Route::post('instances/import-data', 'AdminController@importBackup');
+		Route::get('reports/stats', 'AdminController@reportsStats');
+		Route::get('reports/all', 'AdminController@reportsApiAll');
+		Route::get('reports/get/{id}', 'AdminController@reportsApiGet');
+		Route::post('reports/handle', 'AdminController@reportsApiHandle');
+		Route::get('reports/spam/all', 'AdminController@reportsApiSpamAll');
+		Route::get('reports/spam/get/{id}', 'AdminController@reportsApiSpamGet');
+		Route::post('reports/spam/handle', 'AdminController@reportsApiSpamHandle');
+		Route::post('autospam/config', 'AdminController@getAutospamConfigApi');
+		Route::post('autospam/reports/closed', 'AdminController@getAutospamReportsClosedApi');
+		Route::post('autospam/train', 'AdminController@postAutospamTrainSpamApi');
+		Route::post('autospam/search/non-spam', 'AdminController@postAutospamTrainNonSpamSearchApi');
+		Route::post('autospam/train/non-spam', 'AdminController@postAutospamTrainNonSpamSubmitApi');
+		Route::post('autospam/tokens/custom', 'AdminController@getAutospamCustomTokensApi');
+		Route::post('autospam/tokens/store', 'AdminController@saveNewAutospamCustomTokensApi');
+		Route::post('autospam/tokens/update', 'AdminController@updateAutospamCustomTokensApi');
+		Route::post('autospam/tokens/export', 'AdminController@exportAutospamCustomTokensApi');
+		Route::post('autospam/config/enable', 'AdminController@enableAutospamApi');
+		Route::post('autospam/config/disable', 'AdminController@disableAutospamApi');
 	});
 });
 
@@ -400,6 +420,7 @@ Route::domain(config('pixelfed.domain.app'))->middleware(['validemail', 'twofact
 		Route::get('web/username/{id}', 'SpaController@usernameRedirect');
 		Route::get('web/post/{id}', 'SpaController@webPost');
 		Route::get('web/profile/{id}', 'SpaController@webProfile');
+
 		Route::get('web/{q}', 'SpaController@index')->where('q', '.*');
 		Route::get('web', 'SpaController@index');
 	});
@@ -555,6 +576,7 @@ Route::domain(config('pixelfed.domain.app'))->middleware(['validemail', 'twofact
 			Route::view('labs-deprecation', 'site.help.labs-deprecation')->name('help.labs-deprecation');
 			Route::view('tagging-people', 'site.help.tagging-people')->name('help.tagging-people');
 			Route::view('licenses', 'site.help.licenses')->name('help.licenses');
+			Route::view('instance-max-users-limit', 'site.help.instance-max-users')->name('help.instance-max-users-limit');
 		});
 		Route::get('newsroom/{year}/{month}/{slug}', 'NewsroomController@show');
 		Route::get('newsroom/archive', 'NewsroomController@archive');
@@ -594,6 +616,7 @@ Route::domain(config('pixelfed.domain.app'))->middleware(['validemail', 'twofact
 	Route::get('auth/invite/a/{code}', 'AdminInviteController@index');
 	Route::post('api/v1.1/auth/invite/admin/re', 'AdminInviteController@apiRegister')->middleware('throttle:5,1440');
 
+	Route::get('storage/m/_v2/{pid}/{mhash}/{uhash}/{f}', 'MediaController@fallbackRedirect');
 	Route::get('stories/{username}', 'ProfileController@stories');
 	Route::get('p/{id}', 'StatusController@shortcodeRedirect');
 	Route::get('c/{collection}', 'CollectionController@show');

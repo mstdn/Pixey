@@ -1,10 +1,89 @@
 # Release Notes
 
-## [Unreleased](https://github.com/pixelfed/pixelfed/compare/v0.11.5...dev)
+## [Unreleased](https://github.com/pixelfed/pixelfed/compare/v0.11.7...dev)
 
 ### Added
+- Post edits ([#4416](https://github.com/pixelfed/pixelfed/pull/4416)) ([98cf8f3](https://github.com/pixelfed/pixelfed/commit/98cf8f3))
+
+### Updates
+- Update StatusService, fix bug in getFull method ([4d8b4dcf](https://github.com/pixelfed/pixelfed/commit/4d8b4dcf))
+- Update Config, bump version for post edit support without having to clear cache ([c0190d84](https://github.com/pixelfed/pixelfed/commit/c0190d84))
+- Update EditHistoryModal, fix caption rendering ([0f803446](https://github.com/pixelfed/pixelfed/commit/0f803446))
+- Update StatusRemoteUpdatePipeline, fix typo ([109d0419](https://github.com/pixelfed/pixelfed/commit/109d0419))
+- Update StatusActivityPubDeliver, fix delivery addressing ([1f2183ee](https://github.com/pixelfed/pixelfed/commit/1f2183ee))
+- Update UpdateStatusService, fix formatting issue. Fixes #4423 ([4479055e](https://github.com/pixelfed/pixelfed/commit/4479055e))
+- Update nginx config ([ee3b6e09](https://github.com/pixelfed/pixelfed/commit/ee3b6e09))
+- Update Status model, increase max mentions, hashtags and links ([1430f532](https://github.com/pixelfed/pixelfed/commit/1430f532))
+-  ([](https://github.com/pixelfed/pixelfed/commit/))
+
+## [v0.11.7 (2023-05-24)](https://github.com/pixelfed/pixelfed/compare/v0.11.6...v0.11.7)
+
+### API Changes
+- Added [/api/v1/followed_tags](https://docs.joinmastodon.org/methods/followed_tags/) api endpoint ([175a8486](https://github.com/pixelfed/pixelfed/commit/175a8486))
+- Added [/api/v1/tags/:id/follow](https://docs.joinmastodon.org/methods/tags/#follow) and [/api/v1/tags/:id/unfollow](https://docs.joinmastodon.org/methods/tags/#unfollow) api endpoints ([4d997bb9](https://github.com/pixelfed/pixelfed/commit/4d997bb9))
+- Added [/api/v1/tags/:id](https://docs.joinmastodon.org/methods/tags/) api endpoint ([521b3b4c](https://github.com/pixelfed/pixelfed/commit/521b3b4c))
+- Added `only_media` support to /api/v1/timelines/tag/:id api endpoint ([b5fe956a](https://github.com/pixelfed/pixelfed/commit/b5fe956a))
+- Added /api/v2/instance api endpoint ([167dbcdd](https://github.com/pixelfed/pixelfed/commit/167dbcdd))
+- Removed api endpoint cloud ip block logic ([6a2daf1f](https://github.com/pixelfed/pixelfed/commit/6a2daf1f))
+- Added idempotency-key support to /api/v1/statuses endpoint ([c54cdd3e](https://github.com/pixelfed/pixelfed/commit/c54cdd3e))
+
+### Added
+- Added store remote media on S3 config setting, disabled by default ([51768083](https://github.com/pixelfed/pixelfed/commit/51768083))
+- Added Autospam Advanced Detection ([132a58de](https://github.com/pixelfed/pixelfed/commit/132a58de))
+
+### Updates
+- Update admin dashboard, fix search and dropdown menu ([dac0d083](https://github.com/pixelfed/pixelfed/commit/dac0d083))
+- Update sudo mode view, fix trusted device checkbox ([8ef900bf](https://github.com/pixelfed/pixelfed/commit/8ef900bf))
+- Update SearchApiV2Service, improve postgres support ([666e5732](https://github.com/pixelfed/pixelfed/commit/666e5732))
+- Update StoryController, show active self stories on home timeline ([633351f6](https://github.com/pixelfed/pixelfed/commit/633351f6))
+- Update ApiV1Controller, fix trending accounts format. Closes #4356 ([37bd2ee5](https://github.com/pixelfed/pixelfed/commit/37bd2ee5))
+- Update instance config, enable config cache by default ([970f77b0](https://github.com/pixelfed/pixelfed/commit/970f77b0))
+- Update Admin Dashboard, allow admins to designate an admin account for the landing page and instance api endpoint ([6ea2bdc7](https://github.com/pixelfed/pixelfed/commit/6ea2bdc7))
+- Update config, enable oauth by default ([6a2e9e8f](https://github.com/pixelfed/pixelfed/commit/6a2e9e8f))
+- Update StatusService, fix missing account condition ([f48daab3](https://github.com/pixelfed/pixelfed/commit/f48daab3))
+- Update ProfileService, add softFail param ([6bc20a37](https://github.com/pixelfed/pixelfed/commit/6bc20a37))
+- Update MediaTagService, fix ProfileService to soft fail on missing or deleted accounts ([df444851](https://github.com/pixelfed/pixelfed/commit/df444851))
+- Update LikeService, improve likedBy logic to soft fail on missing or deleted accounts ([91ba1398](https://github.com/pixelfed/pixelfed/commit/91ba1398))
+- Update StatusTransformers, fix ProfileService to soft fail on missing or deleted accounts ([43d3aa2b](https://github.com/pixelfed/pixelfed/commit/43d3aa2b))
+- Update ApiV1Controller, fix hashtag timeline ([fc1a385c](https://github.com/pixelfed/pixelfed/commit/fc1a385c))
+- Update settings view, add fallback avatar ([1a83c585](https://github.com/pixelfed/pixelfed/commit/1a83c585))
+- Update HashtagFollow model, add MAX_LIMIT of 250 tags per account ([ed352141](https://github.com/pixelfed/pixelfed/commit/ed352141))
+- Update Notification logic, remove message and rendered fields ([6cdb5bc6](https://github.com/pixelfed/pixelfed/commit/6cdb5bc6))
+- Update InstanceService, fix banner blurhash memory bug ([3aad75ab](https://github.com/pixelfed/pixelfed/commit/3aad75ab))
+- Update models, remove deprecated toText and toHtml method ([ea943333](https://github.com/pixelfed/pixelfed/commit/ea943333))
+- Update Notification components, add autospam notification support ([0d3b4bc2](https://github.com/pixelfed/pixelfed/commit/0d3b4bc2))
+- Update AutoSpam Bouncer, generate notification on positive detections ([d5f63f8a](https://github.com/pixelfed/pixelfed/commit/d5f63f8a))
+- Update admin autospam apis, remove autospam warning notifications when appropriate ([588ca653](https://github.com/pixelfed/pixelfed/commit/588ca653))
+- Update StatusEntityLexer, stop saving entities ([a91a5e48](https://github.com/pixelfed/pixelfed/commit/a91a5e48))
+- Update UserCreate command, fix is_admin flag ([ad25ed67](https://github.com/pixelfed/pixelfed/commit/ad25ed67))
+- Update Bouncer, adjust advanced Autospam logic ([18cddd43](https://github.com/pixelfed/pixelfed/commit/18cddd43))
+- Update atom view, fix atom feed bug ([63b72c42](https://github.com/pixelfed/pixelfed/commit/63b72c42))
+- Update StatusController, disable post embeds from spam accounts ([c167af43](https://github.com/pixelfed/pixelfed/commit/c167af43))
+- Update ProfileController, require login to view spam accounts, and disable profile embeds and atom feeds for spam accounts ([dd2f5bb9](https://github.com/pixelfed/pixelfed/commit/dd2f5bb9))
+- Update Settings, allow users to disable atom feeds ([3662d3de](https://github.com/pixelfed/pixelfed/commit/3662d3de))
+- Update ApiV1Controller, filter muted/blocked accounts from tag timeline ([f42c1140](https://github.com/pixelfed/pixelfed/commit/f42c1140))
+- Update admin moderation logic, only re-add top level posts ([c6ffda96](https://github.com/pixelfed/pixelfed/commit/c6ffda96))
+- Update admin dashboard, add mass account deletes ([b8426cce](https://github.com/pixelfed/pixelfed/commit/b8426cce))
+- Update scheduler, fix S3 media garbage collection not being executed when cloud storage is enabled via dashboard without .env/config being enabled ([adb070f1](https://github.com/pixelfed/pixelfed/commit/adb070f1))
+- Update MediaController, add fallback for local files that are later stored on S3 but still are referenced in cached objects remotely ([4973cb46](https://github.com/pixelfed/pixelfed/commit/4973cb46))
+- Update PublicTimelineService, improve warmCache query ([9f901d65](https://github.com/pixelfed/pixelfed/commit/9f901d65))
+- Update AP Inbox, fix delete handling ([2800c888](https://github.com/pixelfed/pixelfed/commit/2800c888))
+- Update login/register views and captcha config, enable login or register captchas or both ([c071c719](https://github.com/pixelfed/pixelfed/commit/c071c719))
+- Update login form, allow admins to enable captcha after X failed attempts. Admins can set the number of attempts before captcha is shown, default is 2 attempts before captcha is required ([221ddce0](https://github.com/pixelfed/pixelfed/commit/221ddce0))
+
+## [v0.11.6 (2023-05-03)](https://github.com/pixelfed/pixelfed/compare/v0.11.5...v0.11.6)
+
+### Added
+- Add php 8.2 support. Bump laravel version, v9 => v10 ([fb4ac4eb](https://github.com/pixelfed/pixelfed/commit/fb4ac4eb))
 - New media:fix-nonlocal-driver command. Fixes s3 media created with invalid FILESYSTEM_DRIVER=s3 configuration ([672cccd4](https://github.com/pixelfed/pixelfed/commit/672cccd4))
 - New landing page design ([09c0032b](https://github.com/pixelfed/pixelfed/commit/09c0032b))
+- Add cloud ip bans to BouncerService (disabled by default) ([50ab2e20](https://github.com/pixelfed/pixelfed/commit/50ab2e20))
+- Redesigned Admin Dashboard Reports/Moderation ([c6cc6327](https://github.com/pixelfed/pixelfed/commit/c6cc6327))
+
+### Fixes
+- Fixed `violates check constraint "statuses_visibility_check"` bug affecting postgres instances + various api endpoints ([79b6a17e](https://github.com/pixelfed/pixelfed/commit/79b6a17e))
+- Fixed duplicate hashtags on postgres ([64059cb4](https://github.com/pixelfed/pixelfed/commit/64059cb4))
+- Fixed custom emoji domain search on postgres. Closes #4333 ([3dac45f3](https://github.com/pixelfed/pixelfed/commit/3dac45f3))
 
 ### Updates
 - Update ApiV1Controller, fix blocking remote accounts. Closes #4256 ([8e71e0c0](https://github.com/pixelfed/pixelfed/commit/8e71e0c0))
@@ -24,7 +103,19 @@
 - Update LandingController, fix config variable names ([b716926b](https://github.com/pixelfed/pixelfed/commit/b716926b))
 - Update Privacy Settings, add Directory setting ([634c15e4](https://github.com/pixelfed/pixelfed/commit/634c15e4))
 - Update site config ([6d59dc8e](https://github.com/pixelfed/pixelfed/commit/6d59dc8e))
--  ([](https://github.com/pixelfed/pixelfed/commit/))
+- Update db:raw queries to support laravel v10 ([849e5103](https://github.com/pixelfed/pixelfed/commit/849e5103))
+- Update RegisterController, store client ip during registration ([d4c967de](https://github.com/pixelfed/pixelfed/commit/d4c967de))
+- Update ApiV1Controller, fix account blocks. Closes #4304 ([98739139](https://github.com/pixelfed/pixelfed/commit/98739139))
+- Update RegisterController, improve max_users calculation and add kb page to redirect to if conditions are met ([1bbee6d0](https://github.com/pixelfed/pixelfed/commit/1bbee6d0))
+- Update SecuritySettings, remove imagick depdency for 2FA qr code generation image ([506f95c6](https://github.com/pixelfed/pixelfed/commit/506f95c6))
+- Update 2fa checkpoint view design ([86c472ac](https://github.com/pixelfed/pixelfed/commit/86c472ac))
+- Update sudo mode checkpoint view design ([091e0b2c](https://github.com/pixelfed/pixelfed/commit/091e0b2c))
+- Update ForgotPasswordController, add captcha support, improve security and a new redesigned view ([f6e7ff64](https://github.com/pixelfed/pixelfed/commit/f6e7ff64))
+- Update ResetPasswordController, add captcha support, improve security and a new redesigned view ([0ab5b96a](https://github.com/pixelfed/pixelfed/commit/0ab5b96a))
+- Update Inbox, remove handleCreateActivity logic that rejected posts from accounts without followers ([a93a3efd](https://github.com/pixelfed/pixelfed/commit/a93a3efd))
+- Update ApiV1Controller and DiscoverController, fix postgres hashtag search ([055aa6b3](https://github.com/pixelfed/pixelfed/commit/055aa6b3))
+- Update StatusTagsPipeline, deduplicate hashtags on postgres ([867cbc75](https://github.com/pixelfed/pixelfed/commit/867cbc75))
+- Update SearchApiV2Service, fix postgres hashtag search and prepend wildcard operator to improve results ([6e20d0a6](https://github.com/pixelfed/pixelfed/commit/6e20d0a6))
 
 ## [v0.11.5 (2023-03-25)](https://github.com/pixelfed/pixelfed/compare/v0.11.4...v0.11.5)
 

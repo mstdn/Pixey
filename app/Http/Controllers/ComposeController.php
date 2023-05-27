@@ -561,6 +561,7 @@ class ComposeController extends Controller
 		$status->caption = strip_tags($request->caption);
 		$status->rendered = Autolink::create()->autolink($status->caption);
 		$status->scope = 'draft';
+		$status->visibility = 'draft';
 		$status->profile_id = $profile->id;
 		$status->save();
 
@@ -672,7 +673,7 @@ class ComposeController extends Controller
 
 		$status->caption = strip_tags($request->caption);
 		$status->profile_id = $profile->id;
-		$entities = Extractor::create()->extract($status->caption);
+		$entities = [];
 		$visibility = $profile->unlisted == true && $visibility == 'public' ? 'unlisted' : $visibility;
 		$cw = $profile->cw == true ? true : $cw;
 		$status->is_nsfw = $cw;

@@ -35,7 +35,7 @@ class AdminNewAutospam extends Mailable
     public function envelope()
     {
         return new Envelope(
-            subject: '[' . config('pixelfed.domain.app') . '] Spam Post Detected',
+            subject: '[' . config('pixelfed.domain.app') . '] Spam Post Detected (Ref: autospam-' . $this->report->id . ')',
         );
     }
 
@@ -49,7 +49,7 @@ class AdminNewAutospam extends Mailable
     	$data = $this->report->toArray();
     	$reported_status = null;
     	$reported_account = null;
-    	$url = url('/i/admin/reports/autospam/' . $this->report->id);
+    	$url = url('/i/admin/reports/autospam/' . $this->report->id . '?ref=email');
 
     	if($data['item_type'] === 'App\Status') {
     		$reported_status = StatusService::get($this->report->item_id, false);
